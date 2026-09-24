@@ -59,7 +59,7 @@ const nextConfig: NextConfig = {
     ],
   },
   outputFileTracingIncludes: {
-    "/*": ["skills/**/*", "workflows/**/*"],
+    "/*": ["skills/**/*", "workflows/**/*", "scripts/video_tracking/**/*"],
   },
   turbopack: {
     root: process.cwd(),

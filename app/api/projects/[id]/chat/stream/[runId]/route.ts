@@ -1,3 +1,4 @@
+import { isLocalAppMode } from "@/lib/app-mode";
 import { runs, streams } from "@trigger.dev/sdk";
 import { ensureCurrentAppUser } from "@/lib/app-users";
 import { setAgentRunStatus } from "@/lib/agent-runs";
@@ -27,6 +28,7 @@ async function ownedRun(runId: string, userId: string) {
  * last index to continue.
  */
 export async function GET(request: Request, { params }: Params) {
+  if (isLocalAppMode()) return Response.json({ error: "Use the local agent connection for chat." }, { status: 404 });
   const { runId } = await params;
   const user = await ensureCurrentAppUser();
   if (!user) {
@@ -103,6 +105,7 @@ export async function GET(request: Request, { params }: Params) {
 
 /** Abort a run: cancel the Trigger run (propagates to the loop's abort signal). */
 export async function DELETE(request: Request, { params }: Params) {
+  if (isLocalAppMode()) return Response.json({ error: "Use the local agent connection for chat." }, { status: 404 });
   const { runId } = await params;
   const user = await ensureCurrentAppUser();
   if (!user) {

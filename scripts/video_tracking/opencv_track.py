@@ -47,7 +47,7 @@ def main():
         import cv2
     except Exception as exc:
         raise RuntimeError(
-            "Python OpenCV is not installed. Install python3-opencv in the Trigger runtime."
+            "Python OpenCV is not installed. Install opencv-contrib-python for your Python 3 environment."
         ) from exc
 
     cap = cv2.VideoCapture(args.input)

@@ -39,7 +39,7 @@ await cp(
 await cp(path.join(root, "public"), path.join(destination, "public"), {
   recursive: true,
 });
-for (const directory of ["skills", "workflows"]) {
+for (const directory of ["skills", "workflows", "scripts/video_tracking"]) {
   await cp(path.join(root, directory), path.join(destination, directory), { recursive: true });
 }
 

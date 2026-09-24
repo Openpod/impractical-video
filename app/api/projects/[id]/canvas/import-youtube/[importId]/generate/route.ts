@@ -1,4 +1,4 @@
-import { tasks } from "@trigger.dev/sdk";
+import { queueProjectTask } from "@/lib/project-tasks";
 import { NextResponse } from "next/server";
 import { ensureCurrentAppUser } from "@/lib/app-users";
 import {
@@ -43,7 +43,7 @@ export async function POST(_request: Request, { params }: Params) {
     );
   }
 
-  const run = await tasks.trigger(
+  const run = await queueProjectTask(
     CANVAS_YOUTUBE_GENERATE_TASK_ID,
     { importId, projectId: id, userId: user.userId },
     {

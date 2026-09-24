@@ -1,3 +1,4 @@
+import { isLocalAppMode } from "@/lib/app-mode";
 import { runs, tasks } from "@trigger.dev/sdk";
 import { ensureCurrentAppUser } from "@/lib/app-users";
 import { createAgentRun, getActiveRunForProject, setAgentRunStatus } from "@/lib/agent-runs";
@@ -14,6 +15,7 @@ type Params = { params: Promise<{ id: string }> };
  * the client closing the browser; reconnect via GET (active-run discovery).
  */
 export async function POST(request: Request, { params }: Params) {
+  if (isLocalAppMode()) return Response.json({ error: "Use the local agent connection for chat." }, { status: 404 });
   const { id } = await params;
   const user = await ensureCurrentAppUser();
   if (!user) {
@@ -67,6 +69,7 @@ const TRIGGER_DEAD_STATUSES = new Set([
 ]);
 
 export async function GET(_request: Request, { params }: Params) {
+  if (isLocalAppMode()) return Response.json({ activeRun: null });
   const { id } = await params;
   const user = await ensureCurrentAppUser();
   if (!user) {

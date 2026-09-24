@@ -18,7 +18,7 @@ import {
 } from "@/lib/ffmpeg-lambda";
 
 // Shot extraction for agent tools: the same ffmpeg scene analysis the YouTube
-// import workflow runs (src/trigger/canvas-youtube-import.ts), packaged so the
+// import workflow runs (lib/canvas-youtube-worker.ts), packaged so the
 // chat + composer agents can split ANY workspace video into shot tiles.
 
 const execFileAsync = promisify(execFile);

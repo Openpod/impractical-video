@@ -1,3 +1,4 @@
+import { isLocalAppMode } from "@/lib/app-mode";
 import { tasks } from "@trigger.dev/sdk";
 import { ensureCurrentAppUser } from "@/lib/app-users";
 import { VIDEO_FS_AGENT_CHAT_TASK_ID } from "@/lib/video-fs-agent-chat-task";
@@ -14,6 +15,7 @@ function optionalString(value: unknown) {
 }
 
 export async function POST(request: Request, { params }: Params) {
+  if (isLocalAppMode()) return Response.json({ error: "Use the local agent connection for chat." }, { status: 404 });
   const user = await ensureCurrentAppUser();
   if (!user) {
     return Response.json({ error: "Unauthorized." }, { status: 401 });

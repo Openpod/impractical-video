@@ -1,4 +1,4 @@
-import { tasks } from "@trigger.dev/sdk";
+import { queueProjectTask } from "@/lib/project-tasks";
 import { NextResponse } from "next/server";
 import { ensureCurrentAppUser } from "@/lib/app-users";
 import {
@@ -92,6 +92,7 @@ export async function POST(request: Request, { params }: Params) {
     return NextResponse.json({ error: "Sign in to track video objects." }, { status: 401 });
   }
 
+  await getProjectSnapshot(id, user.userId);
   const body = await request.json().catch(() => ({}));
   const source = isRecord(body.source) ? body.source : {};
   const media = isRecord(body.media) ? body.media : {};
@@ -151,7 +152,7 @@ export async function POST(request: Request, { params }: Params) {
     role: "assistant",
     text: `Started object tracking on "${sourceTitle}". Results will appear on the tile when ready.`,
   });
-  const run = await tasks.trigger(
+  const run = await queueProjectTask(
     VIDEO_OBJECT_TRACKING_TASK_ID,
     { projectId: id, trackId },
     {

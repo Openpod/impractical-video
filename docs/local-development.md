@@ -101,6 +101,19 @@ install an agent, or send any generation requests.
 - **Build directory locked:** stop the other local Next/Electron process before
   starting another build or smoke suite.
 
+## Local background work
+
+The local app does not require a Trigger.dev account, worker, or API key.
+YouTube imports, import generation, and object tracking run in the local app
+process after the request returns. Navigating to another page does not stop
+them; quitting or restarting the app does. Restart interrupted work manually.
+
+These features still need their own tools: YouTube imports use `yt-dlp`,
+FFmpeg/ffprobe, and the configured analysis/planning providers; local object
+tracking uses Python 3 with `opencv-contrib-python`. Generated media uses your
+fal.ai key, including the key saved in **Account → API keys**. Missing tools
+or provider credentials are reported in the task record.
+
 ## Optional hosted deployment
 
 Use `.env.local.example` as the configuration reference and explicitly select
@@ -111,5 +124,6 @@ you enable. These scripts are not an automatic migration runner.
 
 `npm run release:env` validates hosted deployment variables supplied through the
 process environment. It intentionally does not load a developer's env file.
-Trigger.dev, AWS FFmpeg and Modal tracking are separate optional deployments.
+Trigger.dev is retained only for the optional hosted job queue and hosted chat
+streams. AWS FFmpeg and Modal tracking are also separate optional deployments.
 The hosted stack is not part of the credential-free local quickstart.
