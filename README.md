@@ -1,10 +1,27 @@
-# Impractical
+# <img src="docs/images/impractical-logo.svg" width="44" height="44" alt="Impractical ticket logo" align="absmiddle" /> Impractical
 
 [![CI](https://github.com/Openpod/impractical-video/actions/workflows/ci.yml/badge.svg)](https://github.com/Openpod/impractical-video/actions/workflows/ci.yml)
 
-A local video workspace with an infinite canvas, an embedded timeline editor,
-and project-scoped tools for Claude Code and Codex. Your projects are ordinary
-files on your machine.
+An open-source canvas for creating, editing, and shipping AI video projects.
+
+![Impractical canvas with character, environment, and style references](docs/images/canvas.png)
+
+Arrange ideas on an infinite canvas, edit on the timeline, and work with Claude
+Code or Codex. Bring your own fal.ai key. Your projects stay as ordinary files
+on your machine.
+
+<details>
+<summary>See Explore and the setup flow</summary>
+
+Browse characters, environments, styles, and video examples.
+
+![Explore showing the public Impractical character catalog](docs/images/explore.png)
+
+Get started with your own fal.ai key, or skip generation and edit your own media.
+
+![Onboarding with fal.ai API key, purchase credits, and skip choices](docs/images/onboarding.png)
+
+</details>
 
 **Public alpha · Apache 2.0.** Free to use, modify, and distribute, including
 commercially, under the [Apache License 2.0](LICENSE). Bundled third-party code
@@ -32,7 +49,7 @@ npm run dev
 
 Open **http://localhost:3000**. Setup creates a private `.env.local`, enables
 local mode, and generates an MCP credential. It preserves an existing env file.
-No Clerk, Supabase, Stripe, or Impractical account is needed.
+No Trigger.dev, Clerk, Supabase, Stripe, or Impractical account is needed.
 
 For the desktop app, stop the web dev server and run:
 
@@ -153,8 +170,9 @@ Use `npm ci` for reproducible installs. See [CONTRIBUTING.md](CONTRIBUTING.md),
 
 - Local mode is a trusted, single-user workspace. Keep it on loopback.
 - Agent and generation features require the corresponding CLI/provider setup.
-- Some hosted-only integrations (durable Trigger.dev jobs, billing, shared
-  catalogs, remote tracking) require additional services.
+- Local background jobs run in the app process. Keep the app running until
+  they finish; they do not automatically resume after an app restart.
+- Hosted billing, shared catalogs, and remote tracking are optional services.
 - Granular editor command coverage, cross-actor undo, and crash recovery remain
   incomplete. Keep backups of valuable projects.
 - No automatic desktop updater is configured. Public macOS binaries require

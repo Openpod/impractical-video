@@ -3,7 +3,7 @@ import path from "node:path";
 
 // Deliberately explicit: a developer checkout also contains customer projects,
 // test renders and an upstream reference repository. None belong in a release.
-const directories = [".github", "app", "components", "database", "desktop", "lib", "modal", "opencut", "public", "scripts/video_tracking", "skills", "src", "supabase", "templates", "tests", "types", "workflows"];
+const directories = [".github", "app", "components", "database", "desktop", "docs/images", "lib", "modal", "opencut", "public", "scripts/video_tracking", "skills", "src", "supabase", "templates", "tests", "types", "workflows"];
 const files = [
   ".env.example", ".env.local.example", ".gitignore", ".nvmrc", ".vercelignore",
   "LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md", "README.md", "CONTRIBUTING.md", "SECURITY.md", "CLAUDE.md",

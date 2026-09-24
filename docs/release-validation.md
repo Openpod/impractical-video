@@ -1,6 +1,22 @@
 # Release validation
 
-Validated on macOS; clean release builds use Node.js 22.23.2. Updated 2026-09-23:
+Validated on macOS; clean release builds use Node.js 22.23.2. Updated 2026-09-23.
+
+## Alpha 2 update
+
+- Lint, TypeScript, 442 Vitest tests, and all 47 desktop tests pass.
+- A new live HTTP smoke test verifies local background tracking and persisted
+  failure status without Trigger credentials; hosted chat routes stay disabled
+  in local mode. Unit tests cover local import/generation dispatch and hosted
+  queue selection. Paid import/generation requests were not exercised.
+- A credential-free production build and clean source export pass.
+- The retired character skill and automatic glamour prompt additions are removed.
+  Setup removes unmodified copies of the retired skill from existing projects.
+- README screenshots were captured from an isolated local production workspace
+  using public catalog examples. The canonical logo and image hashes are recorded
+  in [README media](images/README.md).
+
+## Initial alpha validation
 
 - Fresh source export: `npm ci` succeeds without credentials or pre-existing data.
 - Setup creates a private local environment and preserves an existing file.
