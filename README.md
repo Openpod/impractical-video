@@ -1,27 +1,24 @@
-# <img src="docs/images/impractical-logo.svg" width="44" height="44" alt="Impractical ticket logo" align="absmiddle" /> Impractical
+<p align="center">
+  <img src="docs/images/impractical-logo.svg" width="80" height="80" alt="Impractical ticket logo" />
+</p>
 
-[![CI](https://github.com/Openpod/impractical-video/actions/workflows/ci.yml/badge.svg)](https://github.com/Openpod/impractical-video/actions/workflows/ci.yml)
+<h1 align="center">Impractical</h1>
 
-An open-source canvas for creating, editing, and shipping AI video projects.
+<p align="center">An open-source canvas for creating, editing, and shipping AI video projects.</p>
 
-![Impractical canvas with character, environment, and style references](docs/images/canvas.png)
+<p align="center">
+  <a href="https://github.com/Openpod/impractical-video/actions/workflows/ci.yml"><img src="https://github.com/Openpod/impractical-video/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+</p>
+
+<p align="center">
+  <a href="docs/images/canvas.png"><img src="docs/images/canvas.png" width="32%" alt="Impractical canvas with character, environment, and style references" /></a>
+  <a href="docs/images/explore.png"><img src="docs/images/explore.png" width="32%" alt="Explore showing the public Impractical character catalog" /></a>
+  <a href="docs/images/onboarding.png"><img src="docs/images/onboarding.png" width="32%" alt="Setup with fal.ai API key, purchase credits, and skip choices" /></a>
+</p>
 
 Arrange ideas on an infinite canvas, edit on the timeline, and work with Claude
 Code or Codex. Bring your own fal.ai key. Your projects stay as ordinary files
 on your machine.
-
-<details>
-<summary>See Explore and the setup flow</summary>
-
-Browse characters, environments, styles, and video examples.
-
-![Explore showing the public Impractical character catalog](docs/images/explore.png)
-
-Get started with your own fal.ai key, or skip generation and edit your own media.
-
-![Onboarding with fal.ai API key, purchase credits, and skip choices](docs/images/onboarding.png)
-
-</details>
 
 **Public alpha · Apache 2.0.** Free to use, modify, and distribute, including
 commercially, under the [Apache License 2.0](LICENSE). Bundled third-party code
