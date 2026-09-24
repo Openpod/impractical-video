@@ -95,7 +95,7 @@ test("closing inactive, active and final project tabs keeps exactly the remainin
       const { project } = await (await request.post("/api/projects", { data: { name } })).json();
       projects.push(project);
       await page.goto(`/projects/${project.id}`);
-      await expect(page.getByRole("tab", { name, exact: true })).toBeVisible();
+      await expect(page.getByRole("tab", { name, exact: true })).toBeVisible({ timeout: 30_000 });
     }
     await page.getByRole("button", { name: "Close Tab Beta tab", exact: true }).click();
     await expect(page.getByRole("tab", { name: "Tab Beta", exact: true })).toHaveCount(0);

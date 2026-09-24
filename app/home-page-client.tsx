@@ -50,6 +50,7 @@ function projectNameFromPrompt(prompt: string) {
 }
 
 function HomeHeroTitle() {
+  const layerSequence = useRef(0);
   const [wordLayers, setWordLayers] = useState<HeroWordLayer[]>([
     { id: 0, phase: "enter", word: HERO_WORDS[0] ?? "" },
   ]);
@@ -60,17 +61,18 @@ function HomeHeroTitle() {
 
   useEffect(() => {
     let wordIndex = 0;
-    let layerId = 0;
     const timeoutIds: number[] = [];
     const intervalId = window.setInterval(() => {
       wordIndex = (wordIndex + 1) % HERO_WORDS.length;
-      layerId += 1;
       const nextWord = HERO_WORDS[wordIndex] ?? HERO_WORDS[0] ?? "";
+      // Capture identity before queuing the update: React may apply several
+      // timer updates together after the main thread has been busy.
+      const nextLayer: HeroWordLayer = { id: ++layerSequence.current, phase: "enter", word: nextWord };
       setWordLayers((current) => [
         ...current
           .filter((layer) => layer.phase === "enter")
           .map((layer) => ({ ...layer, phase: "exit" as const })),
-        { id: layerId, phase: "enter", word: nextWord },
+        nextLayer,
       ]);
       timeoutIds.push(
         window.setTimeout(() => {
