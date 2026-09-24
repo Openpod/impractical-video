@@ -39,6 +39,9 @@ Validated on macOS; clean release builds use Node.js 22.23.2. Updated 2026-09-23
   production UI opens and removes it. The bundle contains no saved key files.
 - `npm audit` reports zero known vulnerabilities for the resolved lockfile.
 - The source export passes the credential/personal-path pattern scan.
+- The initial public snapshot and its new Git history were also scanned with
+  Gitleaks. The three reported matches were reviewed: two keyboard-shortcut
+  attributes and one test idempotency key, all false positives.
 
 Remaining build diagnostics include the Next middleware deprecation and broad
 filesystem tracing warnings. These do not fail the build; runtime size still
@@ -46,6 +49,8 @@ needs further optimization before distributing desktop binaries.
 
 This validation does not exercise paid provider generation, hosted billing,
 Apple signing/notarization, auto-updates, Windows, or Linux desktop behavior.
-CI is configured for Linux, but its remote result is not implied by local checks.
+The [Linux CI workflow](https://github.com/Openpod/impractical-video/actions/workflows/ci.yml)
+reports its own results for every public commit. It provisions Electron's sandbox
+helper and a virtual display for the installed-hook test.
 The clean export contains no Git history; the original repository history has
 not been cleared for public release. See [releasing.md](releasing.md).

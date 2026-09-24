@@ -6,6 +6,13 @@ code retains its original license; the root license does not replace it.
 
 See [release-validation.md](release-validation.md) for the checks run and their limits.
 
+The public repository is [Openpod/impractical-video](https://github.com/Openpod/impractical-video).
+It starts with a reviewed snapshot and fresh history. For subsequent releases,
+work from a clone of that repository, keep its history, run the checks below,
+and tag the validated commit. Never merge the private development repository's
+history into the public repository. Copy and review individual source changes
+when carrying work across from a private checkout.
+
 ## Release a clean snapshot
 
 The development repository has historically tracked experiment outputs and

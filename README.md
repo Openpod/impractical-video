@@ -1,5 +1,7 @@
 # Impractical
 
+[![CI](https://github.com/Openpod/impractical-video/actions/workflows/ci.yml/badge.svg)](https://github.com/Openpod/impractical-video/actions/workflows/ci.yml)
+
 A local video workspace with an infinite canvas, an embedded timeline editor,
 and project-scoped tools for Claude Code and Codex. Your projects are ordinary
 files on your machine.

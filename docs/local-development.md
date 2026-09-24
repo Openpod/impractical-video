@@ -60,7 +60,7 @@ storage, and never returned by the settings API. Keep private backups private.
 The first-run setup covers the workspace, agents, generation and a first project.
 Choose **I've got a fal API key**, **Purchase credits**, or **Skip** on the billing
 step. Skipping leaves local uploads and editing available; video generation
-requires a funded key or a positive Video FS credit balance.
+requires a funded key or a positive Impractical credit balance.
 
 In Desktop, Purchase credits opens the existing Impractical sign-in and checkout.
 It uses `NEXT_PUBLIC_DESKTOP_CLOUD_URL` (default `https://chat.impractical.ai`).
