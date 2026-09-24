@@ -58,8 +58,11 @@ test("Library uploads, previews, imports and manages local files without a cloud
 
     await page.locator(".library-card-title").getByText(titles[0], { exact: true }).click();
     await page.getByRole("button", { name: "Use", exact: true }).click();
+    const imported = page.waitForResponse(response => response.request().method() === "POST" && /\/api\/published-items\/[^/]+\/use$/.test(new URL(response.url()).pathname));
     await page.getByRole("menuitem", { name: project.name, exact: true }).click();
-    await expect(page).toHaveURL(new RegExp(`/projects/${project.id}$`));
+    expect((await imported).status()).toBe(200);
+    // The first project navigation compiles the editor on the cold CI dev server.
+    await expect(page).toHaveURL(new RegExp(`/projects/${project.id}$`), { timeout: 30_000 });
     const snapshot = await (await request.get(`/api/projects/${project.id}`)).json();
     const record = snapshot.files.find((file: { path: string }) => /^uploads\/.+\.md$/.test(file.path));
     expect(record).toBeTruthy();

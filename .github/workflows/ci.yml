@@ -27,6 +27,14 @@ jobs:
       - run: npm audit --audit-level=high
       - run: npm run release:scan
       - run: npm run test:smoke
+      - name: Upload browser failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-failures
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7
       - run: npm run setup
       - run: npm run build
       - run: npm run release:source
