@@ -42,3 +42,4 @@ jobs:
         with:
           name: video-fs-source
           path: dist/source/video-fs
+          include-hidden-files: true
