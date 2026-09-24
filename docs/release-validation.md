@@ -4,11 +4,14 @@ Validated on macOS; clean release builds use Node.js 22.23.2. Updated 2026-09-23
 
 ## Alpha 2 update
 
-- Lint, TypeScript, 442 Vitest tests, and all 47 desktop tests pass.
+- Lint, TypeScript, 443 Vitest tests, and all 47 desktop tests pass.
 - A new live HTTP smoke test verifies local background tracking and persisted
   failure status without Trigger credentials; hosted chat routes stay disabled
   in local mode. Unit tests cover local import/generation dispatch and hosted
   queue selection. Paid import/generation requests were not exercised.
+- A concurrency regression reproduces incomplete JSON reads during background
+  writes before the fix. Atomic text and metadata replacement keeps readers
+  from seeing partially written records; temporary files stay out of snapshots.
 - A credential-free production build and clean source export pass.
 - The retired character skill and automatic glamour prompt additions are removed.
   Setup removes unmodified copies of the retired skill from existing projects.

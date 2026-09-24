@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, readdir, readFile, rename, stat, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { lintSourceFiles } from "@/lib/lint";
 import { buildSourceGraph, orderedClips } from "@/lib/source-graph";
@@ -214,6 +214,18 @@ export async function ensureProjectsRoot() {
   await mkdir(DATA_ROOT, { recursive: true });
 }
 
+async function writeAtomicText(target: string, content: string) {
+  // A same-directory rename publishes the complete file in one step. Reads
+  // during background work must never see writeFile's truncate/write window.
+  const temporary = path.join(path.dirname(target), `.video-fs-write-${randomUUID()}.tmp`);
+  try {
+    await writeFile(temporary, content, { encoding: "utf8", flag: "wx", mode: 0o600 });
+    await rename(temporary, target);
+  } finally {
+    await rm(temporary, { force: true });
+  }
+}
+
 async function writeText(projectId: string, relativePath: string, content: string) {
   if (shouldUseSupabaseWorkspace()) {
     await writeSupabaseText(projectId, relativePath, content);
@@ -221,7 +233,7 @@ async function writeText(projectId: string, relativePath: string, content: strin
   }
   const { target } = resolveProjectPath(projectId, relativePath);
   await mkdir(path.dirname(target), { recursive: true });
-  await writeFile(target, content, "utf8");
+  await writeAtomicText(target, content);
   await touchProject(projectId);
 }
 
@@ -232,10 +244,9 @@ export async function touchProject(projectId: string) {
   }
   const meta = await readProjectMeta(projectId).catch(() => null);
   if (!meta) return;
-  await writeFile(
+  await writeAtomicText(
     path.join(projectRoot(projectId), "project.json"),
     JSON.stringify({ ...meta, updatedAt: nowIso() }, null, 2),
-    "utf8",
   );
 }
 
@@ -273,10 +284,9 @@ export async function renameProject(
   }
   const meta = await readProjectMeta(projectId).catch(() => null);
   if (!meta) return;
-  await writeFile(
+  await writeAtomicText(
     path.join(projectRoot(projectId), "project.json"),
     JSON.stringify({ ...meta, name: trimmed, updatedAt: nowIso() }, null, 2),
-    "utf8",
   );
 }
 
@@ -626,7 +636,7 @@ export async function createProject(name: string, ownerUserId?: string | null): 
     ].map((dir) => mkdir(path.join(root, dir), { recursive: true })),
   );
   const meta = { id, name: name.trim() || "Untitled video", createdAt: nowIso(), updatedAt: nowIso() };
-  await writeFile(path.join(root, "project.json"), JSON.stringify(meta, null, 2), "utf8");
+  await writeAtomicText(path.join(root, "project.json"), JSON.stringify(meta, null, 2));
   await writeFile(path.join(root, "chat.json"), "[]\n", "utf8");
   await writeFile(path.join(root, "timeline.json"), "[]\n", "utf8");
   await writeFile(
@@ -1163,7 +1173,7 @@ export async function appendChat(projectId: string, message: Omit<ChatMessage, "
 
   const chat = await readChat(projectId);
   chat.push({ ...message, at: nowIso() });
-  await writeFile(path.join(projectRoot(projectId), "chat.json"), JSON.stringify(chat, null, 2), "utf8");
+  await writeAtomicText(path.join(projectRoot(projectId), "chat.json"), JSON.stringify(chat, null, 2));
   await touchProject(projectId);
   return chat;
 }

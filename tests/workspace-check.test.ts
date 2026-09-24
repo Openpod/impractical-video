@@ -26,6 +26,28 @@ afterAll(async () => {
 });
 
 describe("workspace checkProject", () => {
+  it("keeps project metadata and task records readable during background writes", async () => {
+    const project = await workspace.createProject("Concurrent writes");
+    const recordPath = "tracking/task.json";
+    await workspace.writeWorkspaceFile(project.id, recordPath, JSON.stringify({ status: "queued" }));
+    const writes = Promise.all(Array.from({ length: 3 }, async (_, worker) => {
+      for (let revision = 0; revision < 25; revision += 1) {
+        await workspace.writeWorkspaceFile(project.id, recordPath, JSON.stringify({ worker, revision, status: "running" }));
+      }
+    }));
+    const reads = (async () => {
+      for (let index = 0; index < 100; index += 1) {
+        expect((await workspace.readProjectMeta(project.id)).name).toBe("Concurrent writes");
+        expect(JSON.parse(await workspace.readWorkspaceFile(project.id, recordPath)).status).toMatch(/queued|running/);
+      }
+    })();
+    const results = await Promise.allSettled([writes, reads]);
+    for (const result of results) {
+      if (result.status === "rejected") throw result.reason;
+    }
+    expect((await workspace.listProjectFiles(project.id)).some(file => file.path.includes(".video-fs-write-"))).toBe(false);
+  });
+
   it("scaffolds a new project that lints clean", async () => {
     const project = await workspace.createProject("Lint Smoke");
     const check = await workspace.checkProject(project.id);

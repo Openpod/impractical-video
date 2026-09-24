@@ -16,6 +16,8 @@ export const PROJECT_SUPPORT_METADATA_PATHS = new Set([
 
 export function isProjectSupportMetadataPath(relativePath: string) {
   const normalized = relativePath.replaceAll("\\", "/");
+  // In-progress atomic writes are bookkeeping, never user-visible artifacts.
+  if (/(^|\/)\.video-fs-write-[a-f0-9-]{36}\.tmp$/.test(normalized)) return true;
   // Agent/runtime bookkeeping churns constantly (git index, CLI session
   // state, companion transcripts). None of it is a video artifact, and every
   // watcher event for it forces the canvas to refetch and remount players
