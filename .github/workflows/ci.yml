@@ -17,10 +17,15 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npm run check
+      - run: npx playwright install --with-deps chromium
+      - name: Configure Electron for Linux tests
+        run: |
+          node node_modules/electron/install.js
+          sudo chown root:root node_modules/electron/dist/chrome-sandbox
+          sudo chmod 4755 node_modules/electron/dist/chrome-sandbox
+      - run: xvfb-run --auto-servernum npm run check
       - run: npm audit --audit-level=high
       - run: npm run release:scan
-      - run: npx playwright install --with-deps chromium
       - run: npm run test:smoke
       - run: npm run setup
       - run: npm run build
