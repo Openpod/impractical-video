@@ -82,7 +82,8 @@ test("Library uploads, previews, imports and manages local files without a cloud
     await card.getByRole("button", { name: "Actions" }).click();
     await page.getByRole("menuitem", { name: "Rename", exact: true }).click();
     await page.locator(".library-inline-input").fill("Renamed image");
-    await page.locator(".library-inline-input").press("Enter");
+    // Saving unmounts the focused input; do not retry Enter against that node.
+    await page.keyboard.press("Enter");
     await expect(page.locator(".library-card-title").getByText("Renamed image", { exact: true })).toBeVisible();
     const renamed = page.locator(".library-card").filter({ has: page.locator(".library-card-title").getByText("Renamed image", { exact: true }) });
     await renamed.getByRole("button", { name: "Actions" }).click();

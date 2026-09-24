@@ -55,7 +55,7 @@ test("project tour follows the controls, can be skipped and replayed, and opens 
     await expect(card).toHaveCount(0);
     await expect(page.locator("[data-project-tour-backdrop]")).toHaveCount(0);
     expect(await page.locator("[data-project-tour-active]").count()).toBe(0);
-  } finally { await request.delete(`/api/projects/${project.id}`); }
+  } finally { await page.goto("/library"); await request.delete(`/api/projects/${project.id}`); }
 });
 
 test("desktop tour points to the native chat toggle and remembers Escape dismissal", async ({ page, request }) => {
@@ -84,7 +84,7 @@ test("desktop tour points to the native chat toggle and remembers Escape dismiss
     await expect(page.getByRole("tab", { name: "Canvas", exact: true })).toBeVisible();
     await expect(card).toHaveCount(0);
     await expect(page.locator("[data-project-tour-backdrop]")).toHaveCount(0);
-  } finally { await request.delete(`/api/projects/${project.id}`); }
+  } finally { await page.goto("/library"); await request.delete(`/api/projects/${project.id}`); }
 });
 
 test("closing inactive, active and final project tabs keeps exactly the remaining tabs across reloads", async ({ page, request }) => {
@@ -111,5 +111,5 @@ test("closing inactive, active and final project tabs keeps exactly the remainin
     await page.reload();
     expect(await page.evaluate(() => JSON.parse(localStorage.getItem("video-fs.desktop.open-project-tabs.v1") || "[]"))).toEqual([]);
     for (const project of projects) expect((await request.get(`/api/projects/${project.id}`)).status()).toBe(200);
-  } finally { for (const project of projects) await request.delete(`/api/projects/${project.id}`); }
+  } finally { await page.goto("/library"); for (const project of projects) await request.delete(`/api/projects/${project.id}`); }
 });
