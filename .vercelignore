@@ -1,0 +1,13 @@
+# Local dev data, experiment runs, stage artifacts — root-anchored so they
+# don't match vendored source dirs like opencut/data/. ~2GB of test videos.
+/data
+/desktop/generated
+/dist
+/eval-jobs
+/eval-runs
+/experiments
+/logs
+/opencut-classic
+/stage-runs
+/scratchpad
+/tmp

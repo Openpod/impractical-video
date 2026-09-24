@@ -1,0 +1,31 @@
+name: CI
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm audit --audit-level=high
+      - run: npm run release:scan
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:smoke
+      - run: npm run setup
+      - run: npm run build
+      - run: npm run release:source
+      - uses: actions/upload-artifact@v4
+        with:
+          name: video-fs-source
+          path: dist/source/video-fs

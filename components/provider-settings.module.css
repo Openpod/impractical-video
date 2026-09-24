@@ -1,0 +1,7 @@
+.form { display: flex; flex-direction: column; gap: 12px; font-size: 14px; }
+.help { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.help a { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
+.status { margin: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 13px; }
+.input { width: 100%; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--surface); color: var(--text); }
+.input:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.error { margin: 0; color: var(--danger, #e25858); font-size: 13px; line-height: 1.5; }

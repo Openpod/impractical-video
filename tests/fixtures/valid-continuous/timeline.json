@@ -1,0 +1,5 @@
+[
+  { "id": "tl_clip_a", "clip_id": "clip_a", "url": "https://media.example/clip_a.mp4" },
+  { "id": "tl_clip_b", "clip_id": "clip_b", "url": "https://media.example/clip_b.mp4" },
+  { "id": "tl_clip_c", "clip_id": "clip_c", "url": "https://media.example/clip_c.mp4" }
+]

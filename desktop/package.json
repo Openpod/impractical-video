@@ -1,0 +1,75 @@
+{
+  "name": "video-fs-desktop",
+  "productName": "Video FS",
+  "version": "0.1.0",
+  "description": "Agent-native local video workspace",
+  "author": "Video FS",
+  "private": true,
+  "main": "main.mjs",
+  "build": {
+    "appId": "ai.impractical.videofs",
+    "productName": "Video FS",
+    "asar": true,
+    "electronVersion": "43.2.0",
+    "directories": {
+      "output": "../dist/desktop"
+    },
+    "files": [
+      "main.mjs",
+      "preload.mjs",
+      "companion-compose-store.mjs",
+      "companion-preferences.mjs",
+      "companion-window-state.mjs",
+      "window-options.mjs",
+      "agent-context-hook.mjs",
+      "agent-setup.mjs",
+      "setup-agent.mjs",
+      "connection-state.mjs",
+      "auth-session-store.mjs",
+      "project-binding.mjs",
+      "generated/paper-mcp.mjs",
+      "package.json",
+      "cloud-config.mjs",
+      "generated/cloud-config.json"
+    ],
+    "extraResources": [
+      {
+        "from": "generated/standalone",
+        "to": "standalone"
+      },
+      {
+        "from": "../skills",
+        "to": "skills"
+      },
+      {
+        "from": "../LICENSE",
+        "to": "LICENSE"
+      },
+      {
+        "from": "../NOTICE",
+        "to": "NOTICE"
+      },
+      {
+        "from": "../THIRD_PARTY_NOTICES.md",
+        "to": "THIRD_PARTY_NOTICES.md"
+      },
+      {
+        "from": "../opencut/LICENSE",
+        "to": "licenses/OpenCut-LICENSE"
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.video",
+      "entitlements": "entitlements.mac.plist",
+      "entitlementsInherit": "entitlements.mac.plist",
+      "hardenedRuntime": true,
+      "icon": "build/icon.icns",
+      "notarize": true,
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    }
+  },
+  "license": "Apache-2.0"
+}

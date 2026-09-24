@@ -1,0 +1,10 @@
+Impractical
+Copyright 2026 Impractical contributors
+
+Original Impractical code is licensed under the Apache License, Version 2.0.
+See LICENSE for the terms. The license does not grant rights to Impractical
+trademarks, except as stated in Section 6 of the license.
+
+Third-party code and assets retain their original licenses. In particular,
+the OpenCut editor in opencut/ and its bundled public assets retain the MIT
+license reproduced in opencut/LICENSE. See THIRD_PARTY_NOTICES.md.

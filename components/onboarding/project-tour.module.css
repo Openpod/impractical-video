@@ -1,0 +1,22 @@
+.spotlightLayer { position: fixed; inset: 0; z-index: 94; overflow: hidden; pointer-events: none; }
+.spotlight { position: fixed; visibility: hidden; border-radius: var(--spotlight-radius); box-shadow: 0 0 0 150vmax rgb(12 14 18 / 50%); pointer-events: none; }
+.spotlight::after { content: ""; position: absolute; inset: 0; border: 2px solid #ed1d24; border-radius: var(--spotlight-radius); animation: spotlightBreathe 2.4s ease-in-out infinite; }
+@keyframes spotlightBreathe {
+  0%, 100% { inset: 0; border-radius: var(--spotlight-radius); }
+  50% { inset: -2px; border-radius: calc(var(--spotlight-radius) + 2px); }
+}
+@media (prefers-reduced-motion: reduce) { .spotlight::after { animation: none; } }
+.card { z-index: 95; width: 270px; max-width: calc(100vw - 32px); padding: 17px 19px; border: 0; border-radius: 14px; background: #ed1d24; color: #fff; box-shadow: 0 12px 36px #00000026; outline: none; -webkit-app-region: no-drag; }
+.top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.count { color: #ffffffbd; font-size: 11px; font-variant-numeric: tabular-nums; }
+.close { display: grid; place-items: center; width: 24px; height: 24px; margin-right: -5px; border: 0; background: transparent; color: #ffffffbd; border-radius: 5px; cursor: pointer; }
+.close:hover { background: #ffffff1a; color: #fff; }
+.card p { margin: 0; color: #fff; font-size: 14px; line-height: 1.6; font-weight: 450; }
+.footer { display: flex; align-items: center; justify-content: space-between; margin-top: 19px; }
+.skip { padding: 6px 0; background: none; border: 0; color: #ffffffbd; font-size: 12px; cursor: pointer; }
+.skip:hover { color: #fff; }
+.next { display: inline-flex; gap: 17px; align-items: center; min-height: 31px; padding: 0 11px; background: #fff; color: #ed1d24; border: 0; border-radius: 7px; font-size: 12px; font-weight: 500; cursor: pointer; }
+.next:hover { background: #fff0f0; }
+.card button:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.arrow { fill: #ed1d24; }
+:global(body:has([data-project-tour-active="true"]) .app-tooltip) { visibility: hidden; }

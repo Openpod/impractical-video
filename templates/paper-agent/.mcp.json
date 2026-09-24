@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "video-fs": {
+      "command": "node",
+      "args": [
+        "{{VIDEO_FS_REPO_ROOT}}/scripts/paper-mcp.mjs"
+      ],
+      "env": {
+        "VIDEO_FS_APP_URL": "{{VIDEO_FS_APP_URL}}",
+        "VIDEO_FS_PROJECT_ID": "{{VIDEO_FS_PROJECT_ID}}"
+      }
+    }
+  }
+}

@@ -1,0 +1,36 @@
+node_modules/
+.next/
+*.tsbuildinfo
+.env*
+!.env.example
+!.env.local.example
+# Root test-video dir only — anchored so it doesn't also ignore opencut/data
+# (whose color source the app imports; leaving it unanchored broke Vercel builds).
+/data/
+logs/
+
+# generated Trigger.dev build output
+.trigger/
+supabase/.temp/
+
+# keyframe eval loop outputs (downloaded images / contact sheets)
+eval-runs/
+.vercel
+experiments/
+stage-runs/
+/desktop/generated/
+/dist/
+**/providers.json
+
+# Local experiments, recordings, and machine-specific configuration
+/tmp/
+/eval-jobs/
+/scratchpad/
+*.tmp.*
+__pycache__/
+*.pyc
+.DS_Store
+/.headtohead.mts
+/.register-boards.mts
+/test-results/
+/playwright-report/

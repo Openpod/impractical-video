@@ -1,0 +1,40 @@
+/* ============================================================
+   Host skin (video-fs-agent fork addition — NOT upstream code).
+   Re-tokens the editor to the host app's palette and, in embed
+   mode (html.host-embed, set by /embed/[host_id]), hides the
+   OpenCut chrome so only the editor surface shows.
+   ============================================================ */
+
+:root {
+  --background: #ffffff;
+  --foreground: #111111;
+  --primary: #ed1d24;
+  --primary-foreground: #ffffff;
+  --ring: #ed1d24;
+}
+
+.dark {
+  --background: hsl(0, 0%, 4%);
+  --foreground: #f2f2f2;
+  --primary: #ed1d24;
+  --primary-foreground: #ffffff;
+  --ring: #ed1d24;
+}
+
+.dark .panel {
+  --background: hsl(0, 0%, 8%);
+  --foreground: #e8e8e8;
+}
+
+/* Embed mode: the host app provides all chrome — hide the entire OpenCut
+   editor header (branding, project name, feedback, export, theme toggle). */
+html.host-embed header {
+  display: none !important;
+}
+
+/* Embed mode: kill outbound marketing/branding links entirely. */
+html.host-embed a[href^="https://opencut.app"],
+html.host-embed a[href="/projects"],
+html.host-embed a[href="/"] {
+  display: none !important;
+}
