@@ -83,8 +83,9 @@ test("fresh project receives Claude and Codex project-local configuration at mod
   );
   assert.equal(claudeSettings.enableAllProjectMcpServers, true);
   assert.deepEqual(claudeSettings.enabledMcpjsonServers, ["video-fs"]);
+  await assert.rejects(stat(path.join(input.projectRoot, ".claude", "skills", "adult-glamour-portfolio", "SKILL.md")), { code: "ENOENT" });
+  assert.doesNotMatch(await readFile(path.join(input.projectRoot, "VIDEO_FS_AGENT_GUIDE.md"), "utf8"), /adult-glamour-portfolio/);
   for (const skill of [
-    "adult-glamour-portfolio",
     "internet-style-references",
     "reference-first-production",
   ]) {

@@ -606,63 +606,6 @@ export function composeClipPrompt(input: {
   return visualParts.filter(Boolean).join(" ");
 }
 
-const ADULT_FEMALE_TERMS =
-  /\b(adult woman|adult female|adult lady|woman|women|female|lady|female-presenting)\b/i;
-const ADULT_TERMS = /\b(adult|early 20s|mid 20s|late 20s|20s|early 30s|mid 30s|late 30s|30s)\b/i;
-const YOUTH_CODED_TERMS =
-  /\b(minor|underage|teen|teenage|child|kid|girlhood|schoolgirl|student uniform|childlike|youthful|young girl)\b/i;
-const GLAMOUR_CONFLICT_TERMS =
-  /\b(modest|conservative|plain|ordinary|average-looking|covered up|no cleavage|small bust|flat[- ]?chested|elderly|senior|grandmother|androgynous)\b/i;
-const GLAMOUR_INTENT_TERMS =
-  /\b(attractive|beautiful|beauty|pretty|gorgeous|stunning|sensual|seductive|alluring|sexy|glamou?r|supermodel|model-like|fashion model|voluptuous|busty|curvy|hourglass|cleavage|neckline|underwear|bodysuit|swimsuit|lingerie-inspired|revealing|sultry)\b/i;
-
-const ADULT_FEMALE_GLAMOUR_PORTFOLIO_DEFAULT = [
-  "Adult female glamour requirement: make the character unmistakably adult, late 20s to 30s, with supermodel-level facial beauty and a conventionally glamorous physique.",
-  "Use striking symmetrical features, sculpted cheekbones, expressive eyes, full lips, luminous skin, polished hair, and high-end editorial makeup.",
-  "Default body design is voluptuous and fashion-model attractive: full bust, defined waist, shapely hips, long elegant legs, confident posture, and sensual but composed body language.",
-  "Wardrobe must emphasize the intended silhouette and neckline with high-fashion editorial glamour.",
-  "If the asset-specific brief requests cleavage, a bodysuit, underwear, fitted clothing, or other sensual styling, preserve and strengthen that exact wardrobe direction instead of covering it with conservative clothing.",
-  "Use PromptCat-style decomposition: subject, anatomy, wardrobe fit, pose, camera angle, lighting, skin/fabric texture, mood, and realism must all reinforce the same attractive adult identity.",
-  "Preservation negatives for the portfolio: avoid anatomy normalization, body proportion averaging, smaller bust than briefed, reduced chest volume, flattened or compressed curves, slimmed torso, generic dataset-average female anatomy, beauty-filter smoothing, plastic skin, airbrushed texture, and naturalization of prominent features.",
-  "Treat attractiveness as a core identity anchor across all nine cells, not a single beauty-shot variation.",
-].join("\n");
-
-function stripSafetyHedging(value: string): string {
-  return value
-    .replace(/\bfully\s+SFW\s+and\s+non[- ]explicit\b/gi, "")
-    .replace(/\bfully\s+SFW\b/gi, "")
-    .replace(/\bSFW\b/g, "")
-    .replace(/\bnon[- ]explicit\b/gi, "")
-    .replace(/\s+([,.])/g, "$1")
-    .replace(/\s{2,}/g, " ")
-    .trim();
-}
-
-/**
- * Portfolio prompts are identity ground truth. This code-level enrichment keeps
- * adult female glamour intent from being softened by generic character wording
- * before the image model sees it.
- */
-export function enrichPortfolioAssetPrompt(input: {
-  category: "characters" | "environments" | "props" | "styles";
-  prompt: string;
-}): string {
-  if (input.category !== "characters") return input.prompt;
-  if (!ADULT_FEMALE_TERMS.test(input.prompt) || !ADULT_TERMS.test(input.prompt)) {
-    return input.prompt;
-  }
-  if (YOUTH_CODED_TERMS.test(input.prompt) || GLAMOUR_CONFLICT_TERMS.test(input.prompt)) {
-    return input.prompt;
-  }
-
-  const hasGlamourIntent = GLAMOUR_INTENT_TERMS.test(input.prompt);
-  const prompt = stripSafetyHedging(input.prompt.trim());
-  const lead = hasGlamourIntent
-    ? "The brief contains adult female glamour/sensual styling intent; preserve it strongly."
-    : "Apply the default adult female glamour aesthetic unless the brief explicitly says otherwise.";
-  return `${prompt}\n\n${lead}\n${ADULT_FEMALE_GLAMOUR_PORTFOLIO_DEFAULT}`;
-}
-
 export type ModelReferenceLegendInput = {
   id: string;
   body: string;

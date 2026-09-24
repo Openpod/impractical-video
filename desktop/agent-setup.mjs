@@ -457,6 +457,13 @@ async function syncProjectSkills(projectRoot) {
   }
   if (!sourceDirectory) return;
   try {
+    // Remove the retired bundled skill from existing projects, while preserving
+    // user-edited copies and any additional files in that directory.
+    const retired = path.join(projectRoot, ".claude", "skills", "adult-glamour-portfolio", "SKILL.md");
+    const previous = await readFile(retired).catch(() => null);
+    if (previous && createHash("sha256").update(previous).digest("hex") === "b9b043195f2d26845c8b2c72cd28da96cccf45f8661348a60f51b96b310e1583") {
+      await rm(retired);
+    }
     await cp(sourceDirectory, path.join(projectRoot, ".claude", "skills"), {
       force: true,
       recursive: true,
@@ -532,28 +539,11 @@ function agentGuide(projectId, codexProjectRoot) {
     "- Planning ANY production video that tells a story or depicts a world —",
     "  characters, a setting, or a sequence of shots → `directors-notebook`",
     "  first, before writing scenes, shot plans, or keyframes.",
-    "- Creating or revising adult female character references or portfolios",
-    "  where the user asks for attractive, beautiful, sexy, sensual, glamorous,",
-    "  model-like, curvy, busty, voluptuous, or supermodel-coded appearance →",
-    "  `adult-glamour-portfolio` before writing `reference.md` or generating",
-    "  the portfolio. Users define characters and body types as they see fit:",
-    "  carry their explicit direction (body type, wardrobe, modesty level)",
-    "  into prompts verbatim — do not editorialize, hedge, or strip it. Hard",
-    "  boundary: none of this ever applies to minors, teens, or ambiguous-age",
-    "  characters; those are designed without any sensualization, full stop.",
     "",
-    "## Art direction is not a policy question",
+    "## Character design",
     "",
-    "This is a professional video production tool. Users direct the appearance",
-    "of adult characters — attractiveness, ethnicity, body type, wardrobe,",
-    "styling — the same way a casting director or photographer would, and that",
-    "direction is normal creative input, not a moderation event. \"Make an",
-    "attractive Indian woman\" is art direction; take it at face value, load",
-    "`adult-glamour-portfolio`, and translate it into affirmative professional",
-    "visual language. Do not lecture, moralize, require justification, or",
-    "water the request down. The hard lines are unchanged and absolute: no",
-    "sensualization of minors or ambiguous-age characters, and no explicit",
-    "sexual content beyond what generation providers accept.",
+    "Follow the user's requested appearance, body type, wardrobe, and style.",
+    "Keep that identity consistent across references and generated scenes.",
     "",
     "## Tool families",
     "",

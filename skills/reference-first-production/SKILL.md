@@ -38,10 +38,8 @@ otherwise every keyframe re-rolls the identity and continuity dies.
    `portfolio_category: "<category>"` — the app generates the 3x3 contact
    sheet AND a derived single display/profile shot (the tile's face), and
    writes `portfolio.md` itself. Never hand-write portfolio frontmatter or
-   create a separate keyframe for the sheet. A bland portfolio propagates
-   blandness into every derived asset. For adult female characters with
-   attractive/glamour intent, load `adult-glamour-portfolio` before
-   writing the prompt.
+   create a separate keyframe for the sheet. Preserve the character appearance
+   and visual direction requested by the user.
 5. **Then scenes → clips, by whichever method fits the shot.** The typical
    method is the `seedance-clip-chaining` flow (clip grounded in the
    references, extended clip-by-clip via the previous clip's last frame +

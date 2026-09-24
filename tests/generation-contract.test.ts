@@ -4,7 +4,6 @@ import {
   characterRegion,
   composeConditionedPrompt,
   composeStagingDirection,
-  enrichPortfolioAssetPrompt,
   regionForScreenPosition,
   resolveGenerationAnchors,
   sceneStateOrderSwaps,
@@ -244,44 +243,6 @@ describe("composeConditionedPrompt", () => {
     });
     expect(prompt).toContain('Image 2: identity reference sheet for "char_a"');
     expect(prompt).not.toContain('Image 1: identity reference sheet');
-  });
-});
-
-describe("enrichPortfolioAssetPrompt", () => {
-  it("strengthens adult female glamour portfolio prompts with concrete body and wardrobe direction", () => {
-    const prompt = enrichPortfolioAssetPrompt({
-      category: "characters",
-      prompt:
-        "Adult Asian woman general, early 30s, high-fashion beauty and commanding presence. Wardrobe includes oversized crisp white button-down shirt over white underwear, fully SFW and non-explicit.",
-    });
-
-    expect(prompt).toContain("supermodel-level facial beauty");
-    expect(prompt).toContain("full bust");
-    expect(prompt).toContain("defined waist");
-    expect(prompt).toContain("shapely hips");
-    expect(prompt).toContain("preserve and strengthen that exact wardrobe direction");
-    expect(prompt).toContain("PromptCat-style decomposition");
-    expect(prompt).toContain("body proportion averaging");
-    expect(prompt).toContain("dataset-average female anatomy");
-    expect(prompt).toContain("naturalization of prominent features");
-    expect(prompt).not.toContain("Do not add pants");
-    expect(prompt).not.toContain("fully SFW");
-    expect(prompt).not.toContain("no nudity");
-    expect(prompt).not.toContain("non-explicit");
-  });
-
-  it("does not sensualize youth-coded or explicitly modest character prompts", () => {
-    const youth = "Teen girl scout character, cheerful and childlike.";
-    const modest =
-      "Adult woman, early 30s, modest conservative wardrobe, no cleavage, ordinary office worker.";
-
-    expect(enrichPortfolioAssetPrompt({ category: "characters", prompt: youth })).toBe(youth);
-    expect(enrichPortfolioAssetPrompt({ category: "characters", prompt: modest })).toBe(modest);
-  });
-
-  it("leaves non-character portfolio prompts unchanged", () => {
-    const prompt = "Adult female mannequin-style prop in a retail window.";
-    expect(enrichPortfolioAssetPrompt({ category: "props", prompt })).toBe(prompt);
   });
 });
 
