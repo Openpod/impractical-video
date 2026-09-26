@@ -8,9 +8,11 @@ import {
   lstat,
   mkdir,
   readFile,
+  readlink,
   realpath,
   rename,
   rm,
+  symlink,
   writeFile,
 } from "node:fs/promises";
 import path from "node:path";
@@ -89,6 +91,11 @@ export async function setupAgentProject({ projectId: rawProjectId, state }) {
     mkdir(path.join(projectRoot, ".codex"), { mode: 0o700, recursive: true }),
   ]);
   await syncProjectSkills(projectRoot);
+  // Refresh the app-owned guide first; newly created agent entry points link to it.
+  const guideResult = await writePrivateFileAtomic(
+    path.join(projectRoot, GUIDE_NAME),
+    guide,
+  );
   const claudeResult = await writePrivateFileIfAbsent(
     path.join(projectRoot, ".mcp.json"),
     claudeConfig,
@@ -106,14 +113,14 @@ export async function setupAgentProject({ projectId: rawProjectId, state }) {
     path.join(projectRoot, ".codex", "hooks.json"),
     codexHookConfig,
   );
-  const claudeGuideResult = await writePrivateFileIfAbsent(
-    path.join(projectRoot, "CLAUDE.md"),
-    guide,
-  );
-  const codexGuideResult = await writePrivateFileIfAbsent(
+  const codexGuideResult = await writeGuideLinkIfAbsent(
     path.join(projectRoot, "AGENTS.md"),
+    GUIDE_NAME,
     guide,
   );
+  const claudeGuideResult = codexGuideResult.managed
+    ? await writeGuideLinkIfAbsent(path.join(projectRoot, "CLAUDE.md"), "AGENTS.md", guide)
+    : await writePrivateFileIfAbsent(path.join(projectRoot, "CLAUDE.md"), guide);
 
   const supportDirectory = path.join(projectRoot, ".video-fs");
   await mkdir(supportDirectory, { mode: 0o700, recursive: true });
@@ -140,9 +147,6 @@ export async function setupAgentProject({ projectId: rawProjectId, state }) {
       path.join(supportDirectory, "CONNECT_AGENTS.md"),
       fallbackGuide,
     ),
-    // App-owned and always refreshed: guide improvements must reach existing
-    // projects even though CLAUDE.md/AGENTS.md (user-editable) are preserved.
-    writePrivateFileAtomic(path.join(projectRoot, GUIDE_NAME), guide),
     writeConflictCopy(
       supportDirectory,
       "claude-settings",
@@ -180,9 +184,9 @@ export async function setupAgentProject({ projectId: rawProjectId, state }) {
       ...createdPath(supportResults[0], ".video-fs/claude.mcp.json"),
       ...createdPath(supportResults[1], ".video-fs/codex.config.toml"),
       ...createdPath(supportResults[2], ".video-fs/CONNECT_AGENTS.md"),
-      ...createdPath(supportResults[3], GUIDE_NAME),
+      ...createdPath(guideResult, GUIDE_NAME),
+      ...supportCreatedPath(projectRoot, supportResults[3]),
       ...supportCreatedPath(projectRoot, supportResults[4]),
-      ...supportCreatedPath(projectRoot, supportResults[5]),
     ],
     projectId,
     projectRoot,
@@ -387,6 +391,38 @@ async function writePrivateFileIfAbsent(filePath, contents) {
     };
   } finally {
     await rm(temporaryPath, { force: true }).catch(() => {});
+  }
+}
+
+async function writeGuideLinkIfAbsent(filePath, target, contents) {
+  const existing = await lstat(filePath).catch((error) => {
+    if (error?.code === "ENOENT") return null;
+    throw error;
+  });
+  if (existing?.isSymbolicLink()) {
+    const managed = await readlink(filePath) === target;
+    return {
+      path: filePath,
+      status: managed ? "unchanged" : "conflict",
+      managed,
+    };
+  }
+  if (existing) {
+    return {
+      path: filePath,
+      status: await readFile(filePath, "utf8") === contents ? "unchanged" : "conflict",
+    };
+  }
+  try {
+    await symlink(target, filePath, "file");
+    return { path: filePath, status: "created", managed: true };
+  } catch (error) {
+    if (error?.code === "EEXIST") return writeGuideLinkIfAbsent(filePath, target, contents);
+    // Some Windows setups cannot create symlinks. Keep agent setup usable there.
+    if (process.platform === "win32" && ["EPERM", "EACCES", "ENOTSUP"].includes(error?.code)) {
+      return writePrivateFileIfAbsent(filePath, contents);
+    }
+    throw error;
   }
 }
 

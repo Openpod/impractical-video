@@ -1,4 +1,4 @@
-import { readdir, lstat } from "node:fs/promises";
+import { readdir, lstat, readlink } from "node:fs/promises";
 import path from "node:path";
 
 // Deliberately explicit: a developer checkout also contains customer projects,
@@ -6,7 +6,7 @@ import path from "node:path";
 const directories = [".github", "app", "components", "database", "desktop", "docs/images", "lib", "modal", "opencut", "public", "scripts/video_tracking", "skills", "src", "supabase", "templates", "tests", "types", "workflows"];
 const files = [
   ".env.example", ".env.local.example", ".gitignore", ".nvmrc", ".vercelignore",
-  "LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md", "README.md", "CONTRIBUTING.md", "SECURITY.md", "CLAUDE.md",
+  "LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md", "README.md", "CONTRIBUTING.md", "SECURITY.md", "CLAUDE.md", "AGENTS.md",
   "package.json", "package-lock.json", "next.config.ts", "next-env.d.ts", "tsconfig.json",
   "middleware.ts", "postcss.config.mjs", "eslint.config.mjs", "vitest.config.ts", "trigger.config.ts", "playwright.config.ts",
   "docs/releasing.md", "docs/local-development.md", "docs/release-validation.md", "desktop/README.md",
@@ -19,7 +19,13 @@ export async function sourceFiles(root = process.cwd()) {
   async function visit(relative) {
     if (excluded.test(relative)) return;
     const info = await lstat(path.join(root, relative));
-    if (info.isSymbolicLink()) throw new Error(`Release source must not contain symlinks: ${relative}`);
+    if (info.isSymbolicLink()) {
+      if (relative !== "CLAUDE.md" || await readlink(path.join(root, relative)) !== "AGENTS.md") {
+        throw new Error(`Release source must not contain symlinks: ${relative}`);
+      }
+      result.add(relative);
+      return;
+    }
     if (info.isDirectory()) {
       for (const entry of await readdir(path.join(root, relative))) await visit(`${relative}/${entry}`);
     } else if (info.isFile()) {

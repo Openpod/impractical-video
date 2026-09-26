@@ -32,9 +32,11 @@ npm run release:source
 The exporter copies an explicit set of current source files into
 `dist/source/video-fs`. It includes uncommitted fixes but excludes `.git`, env
 secrets, local projects, caches, experiments, scratch files and the unused
-`opencut-classic` reference checkout. It rejects symlinks and common credential
-patterns, and refuses to overwrite an existing export. Pass a new destination
-with `npm run release:source -- /absolute/new/path` for another snapshot.
+`opencut-classic` reference checkout. It accepts only the root `CLAUDE.md` →
+`AGENTS.md` symlink, materializes it as a file in the export, rejects other
+symlinks and common credential patterns, and refuses to overwrite an existing
+export. Pass a new destination with `npm run release:source -- /absolute/new/path`
+for another snapshot.
 
 Verify the snapshot as a new contributor:
 

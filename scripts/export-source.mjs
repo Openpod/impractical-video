@@ -11,7 +11,8 @@ await mkdir(destination);
 for (const relative of files) {
   const target = path.join(destination, relative);
   await mkdir(path.dirname(target), { recursive: true });
-  await cp(path.join(root, relative), target, { errorOnExist: true, force: false });
+  // Materialize the approved CLAUDE.md link in the export for portable source archives.
+  await cp(path.join(root, relative), target, { dereference: true, errorOnExist: true, force: false });
 }
 console.log(`Exported ${files.length} source files to ${destination}`);
 console.log("No Git history, credentials, local projects, or experiment outputs were included.");
