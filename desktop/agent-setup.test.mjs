@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import {
   mkdir,
   mkdtemp,
+  lstat,
   readFile,
+  readlink,
   readdir,
   realpath,
   stat,
@@ -63,6 +65,9 @@ test("fresh project receives Claude and Codex project-local configuration at mod
   const result = await setupAgentProject(input);
   assert.deepEqual(result.conflicts, []);
   assert.deepEqual(result.codexProjectRoot, { status: "created" });
+  assert.equal(await readlink(path.join(input.projectRoot, "AGENTS.md")), "VIDEO_FS_AGENT_GUIDE.md");
+  assert.equal(await readlink(path.join(input.projectRoot, "CLAUDE.md")), "AGENTS.md");
+  assert.equal((await stat(path.join(input.projectRoot, "VIDEO_FS_AGENT_GUIDE.md"))).mode & 0o777, 0o600);
   for (const relativePath of [
     ".mcp.json",
     ".claude/settings.json",
@@ -97,6 +102,40 @@ test("fresh project receives Claude and Codex project-local configuration at mod
       /^---\n/,
     );
   }
+});
+
+test("linked agent guides read the same refreshed content", async () => {
+  const input = await fixture();
+  await setupAgentProject(input);
+  const guidePath = path.join(input.projectRoot, "VIDEO_FS_AGENT_GUIDE.md");
+  await writeFile(guidePath, "Updated guide\n", "utf8");
+  for (const name of ["AGENTS.md", "CLAUDE.md"]) {
+    assert.equal(await readFile(path.join(input.projectRoot, name), "utf8"), "Updated guide\n");
+  }
+  const second = await setupAgentProject(input);
+  assert.deepEqual(second.conflicts, []);
+  assert.equal(await readFile(path.join(input.projectRoot, "AGENTS.md"), "utf8"), await readFile(guidePath, "utf8"));
+  assert.ok((await lstat(path.join(input.projectRoot, "CLAUDE.md"))).isSymbolicLink());
+});
+
+test("existing custom agent guides stay unchanged", async () => {
+  const input = await fixture();
+  await writeFile(path.join(input.projectRoot, "AGENTS.md"), "Custom Codex guide\n");
+  await writeFile(path.join(input.projectRoot, "CLAUDE.md"), "Custom Claude guide\n");
+  const result = await setupAgentProject(input);
+  assert.ok(result.conflicts.includes("AGENTS.md"));
+  assert.ok(result.conflicts.includes("CLAUDE.md"));
+  assert.equal(await readFile(path.join(input.projectRoot, "AGENTS.md"), "utf8"), "Custom Codex guide\n");
+  assert.equal(await readFile(path.join(input.projectRoot, "CLAUDE.md"), "utf8"), "Custom Claude guide\n");
+});
+
+test("a custom AGENTS.md does not become Claude's guide", async () => {
+  const input = await fixture();
+  await writeFile(path.join(input.projectRoot, "AGENTS.md"), "Custom Codex guide\n");
+  const result = await setupAgentProject(input);
+  assert.ok(result.conflicts.includes("AGENTS.md"));
+  assert.equal(await readFile(path.join(input.projectRoot, "CLAUDE.md"), "utf8"), await readFile(path.join(input.projectRoot, "VIDEO_FS_AGENT_GUIDE.md"), "utf8"));
+  assert.ok(!(await lstat(path.join(input.projectRoot, "CLAUDE.md"))).isSymbolicLink());
 });
 
 test("legacy app-owned Claude settings gain the explicit Video FS approval", async () => {

@@ -44,10 +44,13 @@ Impractical hook through `/hooks`.
 `.video-fs/CONNECT_AGENTS.md` contains conflict-specific recovery instructions
 when Impractical preserves an existing agent configuration.
 
-Setup never overwrites an existing `.mcp.json`, `.codex/config.toml`,
-`CLAUDE.md`, or `AGENTS.md`. When a conflict exists, the original is preserved
-byte-for-byte and the proposed configuration plus explicit fallback commands
-are written under `.video-fs/`.
+Fresh projects link `CLAUDE.md` → `AGENTS.md` → the app-owned
+`VIDEO_FS_AGENT_GUIDE.md`, which setup refreshes. On Windows systems that
+cannot create symlinks, setup writes guide copies instead. Replacing
+`CLAUDE.md` with a regular file customizes Claude alone. Replacing `AGENTS.md`
+affects both agents while Claude still links to it. Setup preserves existing
+regular files, `.mcp.json`, and `.codex/config.toml`. When a conflict exists,
+the original is preserved and recovery instructions are written under `.video-fs/`.
 
 For development, setup can also be requested explicitly from the current
 mode-0600 desktop connection record:

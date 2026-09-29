@@ -26,6 +26,8 @@ jobs:
       - run: xvfb-run --auto-servernum npm run check
       - run: npm audit --audit-level=high
       - run: npm run release:scan
+      - name: Verify agent guide link
+        run: test "$(readlink CLAUDE.md)" = AGENTS.md
       - run: npm run test:smoke
       - name: Upload browser failure diagnostics
         if: failure()
@@ -38,6 +40,8 @@ jobs:
       - run: npm run setup
       - run: npm run build
       - run: npm run release:source
+      - name: Verify exported agent guides
+        run: test ! -L dist/source/video-fs/CLAUDE.md && cmp AGENTS.md dist/source/video-fs/CLAUDE.md
       - uses: actions/upload-artifact@v4
         with:
           name: video-fs-source
