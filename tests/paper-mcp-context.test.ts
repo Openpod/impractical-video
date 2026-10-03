@@ -51,6 +51,13 @@ function responseFor(call: AppCall) {
           title: "Vertical Story Episode",
         },
       };
+    case "generate_launch_video":
+      return {
+        check: { issues: [] },
+        clipIds: ["launch_reveal_1_blackbox"],
+        ok: true,
+        sceneId: call.arguments.sceneId ?? "scene_launch_teaser_blackbox",
+      };
     case "get_agent_context":
       return { context, staleEntities: [] };
     case "get_agent_context_status":
@@ -252,6 +259,7 @@ describe("packaged Paper MCP agent context", () => {
         "editor_structure",
         "edit_media",
         "generate_audio",
+        "generate_launch_video",
         "load_workflow",
       ]),
     );
@@ -292,6 +300,45 @@ describe("packaged Paper MCP agent context", () => {
     expect(calls.find((call) => call.tool === "load_workflow")?.arguments).toEqual({
       projectId,
       workflowId: "vertical-story-episode",
+    });
+    const launchVideoTool = await client.callTool({
+      arguments: {
+        duration_seconds: 7,
+        image_id: "up_product",
+        scene_title: "Launch teaser",
+        shots: [
+          { prompt: "Slow push on the product.", title: "Reveal" },
+          {
+            duration_seconds: 9,
+            prompt: "Continue from @Video1: rotate to camera.",
+            title: "Detail",
+          },
+        ],
+        title: "Launch Teaser",
+      },
+      name: "generate_launch_video",
+    });
+    expect(launchVideoTool.isError).not.toBe(true);
+    expect(launchVideoTool.structuredContent).toMatchObject({
+      ok: true,
+      sceneId: "scene_launch_teaser_blackbox",
+    });
+    expect(
+      calls.find((call) => call.tool === "generate_launch_video")?.arguments,
+    ).toEqual({
+      durationSeconds: 7,
+      imageId: "up_product",
+      projectId,
+      sceneTitle: "Launch teaser",
+      shots: [
+        { prompt: "Slow push on the product.", title: "Reveal" },
+        {
+          durationSeconds: 9,
+          prompt: "Continue from @Video1: rotate to camera.",
+          title: "Detail",
+        },
+      ],
+      title: "Launch Teaser",
     });
     const failedTool = await client.callTool({
       arguments: {},

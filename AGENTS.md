@@ -57,6 +57,8 @@ clip's `from_keyframe` to maintain continuity.
   complete prompt; the app does not invoke another LLM.
 - `generate_clip`: generate a Seedance clip for an existing scene. Pass
   `from_keyframe_id` and `to_keyframe_id` when endpoints should be pinned.
+- `generate_launch_video`: executable image → multi-shot launch video (scene
+  creation, Seedance clip chaining, stop-on-failure, final `check_project`).
 - `generate_audio`: create music, speech, sound effects, or voice design.
 - `edit_media`: trim clips, bake image edits, or extract frames through the app.
 - `editor_timeline_get`: read the Editor timeline and revision before editing.
