@@ -46,6 +46,7 @@ import {
   paperCreateScene,
   paperGenerateClip,
   paperGenerateImage,
+  paperGenerateLaunchVideo,
   paperGenerateReferencePortfolio,
   paperGetProjectStatus,
   paperScaffoldKeyframe,
@@ -140,6 +141,30 @@ const requestSchema = z.discriminatedUnion("tool", [
       toKeyframeId: z.string().nullable().optional(),
     }),
     tool: z.literal("generate_clip"),
+  }),
+  z.object({
+    arguments: z.object({
+      aspectRatio: z.string().optional(),
+      durationSeconds: z.number().min(4).max(15).optional(),
+      imageId: z.string().min(1),
+      projectId: z.string().min(1),
+      sceneId: z.string().min(1).nullable().optional(),
+      sceneTitle: z.string().min(1).optional(),
+      shots: z
+        .array(
+          z
+            .object({
+              durationSeconds: z.number().min(4).max(15).optional(),
+              prompt: z.string().min(1),
+              title: z.string().min(1),
+            })
+            .strict(),
+        )
+        .min(1)
+        .max(5),
+      title: z.string().min(1),
+    }),
+    tool: z.literal("generate_launch_video"),
   }),
   z.object({
     arguments: z.object({ projectId: z.string().min(1) }),
@@ -564,6 +589,8 @@ export async function POST(request: Request) {
         return NextResponse.json(await paperGenerateImage(call.arguments));
       case "generate_clip":
         return NextResponse.json(await paperGenerateClip(call.arguments));
+      case "generate_launch_video":
+        return NextResponse.json(await paperGenerateLaunchVideo(call.arguments));
       case "check_project":
         return NextResponse.json(await paperCheckProject(call.arguments.projectId));
       case "get_project_status":

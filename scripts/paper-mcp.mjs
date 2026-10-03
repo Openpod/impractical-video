@@ -398,6 +398,64 @@ register(
 );
 
 register(
+  "generate_launch_video",
+  {
+    description:
+      "Executable image → launch-video workflow (the house chaining method as one call). Anchors a scene on the " +
+      "given image (upload, reference, or keyframe id), generates one Seedance clip per shot — the first conditioned " +
+      "on the image as @Image1, each continuation extending the previous clip's actual footage as @Video1 while " +
+      "carrying the same image reference — then stops at the first failed link and runs check_project. Supply the " +
+      "creative beats as shots[] ({title, prompt, duration_seconds?}, 1-5); scene creation, chaining, reference " +
+      "carrying, and the failure policy are handled. For a one-off clip or full manual control, use generate_clip.",
+    inputSchema: {
+      aspect_ratio: z.string().optional(),
+      duration_seconds: z.number().min(4).max(15).optional(),
+      image_id: z.string().min(1),
+      project_id: z.string().optional(),
+      scene_id: z.string().min(1).nullable().optional(),
+      scene_title: z.string().min(1).optional(),
+      shots: z
+        .array(
+          z
+            .object({
+              duration_seconds: z.number().min(4).max(15).optional(),
+              prompt: z.string().min(1),
+              title: z.string().min(1),
+            })
+            .strict(),
+        )
+        .min(1)
+        .max(5),
+      title: z.string().min(1),
+    },
+  },
+  ({
+    aspect_ratio,
+    duration_seconds,
+    image_id,
+    project_id,
+    scene_id,
+    scene_title,
+    shots,
+    title,
+  }) =>
+    callApp("generate_launch_video", {
+      aspectRatio: aspect_ratio,
+      durationSeconds: duration_seconds,
+      imageId: image_id,
+      projectId: projectId(project_id),
+      sceneId: scene_id,
+      sceneTitle: scene_title,
+      shots: shots.map((shot) => ({
+        durationSeconds: shot.duration_seconds,
+        prompt: shot.prompt,
+        title: shot.title,
+      })),
+      title,
+    }),
+);
+
+register(
   "check_project",
   {
     description:
