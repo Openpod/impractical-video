@@ -72,8 +72,8 @@ export async function setupAgentProject({ projectId: rawProjectId, state }) {
     `args = ${tomlStringArray(launcher.args)}`,
     "",
   ].join("\n");
-  const claudeHookConfig = hookConfig(claudeHookLauncher);
-  const codexHookConfig = hookConfig(codexHookLauncher);
+  const claudeHookConfig = hookConfig(claudeHookLauncher, "claude");
+  const codexHookConfig = hookConfig(codexHookLauncher, "codex");
   const guide = agentGuide(projectId, codexProjectRoot);
 
   for (const output of [
@@ -109,6 +109,7 @@ export async function setupAgentProject({ projectId: rawProjectId, state }) {
     claudeHookConfig,
   );
   await enableProjectMcpServers(path.join(projectRoot, ".claude", "settings.json"));
+  await removeClaudeKeysFromCodexHooks(path.join(projectRoot, ".codex", "hooks.json"));
   const codexHookResult = await writePrivateFileIfAbsent(
     path.join(projectRoot, ".codex", "hooks.json"),
     codexHookConfig,
@@ -293,7 +294,7 @@ function contextHookLauncherForProject(mcp, projectId, agent) {
   };
 }
 
-function hookConfig(launcher) {
+function hookConfig(launcher, agent) {
   const command = [launcher.command, ...launcher.args]
     .map(shellQuote)
     .join(" ");
@@ -303,8 +304,14 @@ function hookConfig(launcher) {
       // interactive "approve this MCP server" prompt — the desktop wrote that
       // config itself, so approval is implicit. Current Claude releases need
       // the explicit server allowlist even when the blanket legacy flag is set.
-      enableAllProjectMcpServers: true,
-      enabledMcpjsonServers: ["video-fs"],
+      // Codex loads no hooks at all from a file with a top-level key it does
+      // not know, so these stay out of its file.
+      ...(agent === "claude"
+        ? {
+            enableAllProjectMcpServers: true,
+            enabledMcpjsonServers: ["video-fs"],
+          }
+        : {}),
       hooks: {
         UserPromptSubmit: [
           {
@@ -359,6 +366,34 @@ async function enableProjectMcpServers(settingsPath) {
     await writeFile(settingsPath, `${JSON.stringify(parsed, null, 2)}\n`, { mode: 0o600 });
   } catch {
     // Missing or hand-mangled settings stay untouched.
+  }
+}
+
+/** Earlier desktop output put Claude's two MCP approval keys into the Codex
+ * hooks file as well, and Codex loads no hooks from a file with a top-level
+ * key it does not know. Remove them ONLY from our own earlier output, under
+ * the same test as above. */
+async function removeClaudeKeysFromCodexHooks(hooksPath) {
+  try {
+    const parsed = JSON.parse(await readFile(hooksPath, "utf8"));
+    if (!parsed || typeof parsed !== "object") return;
+    const keys = Object.keys(parsed);
+    const appOwned =
+      keys.every(
+        (key) =>
+          key === "hooks" ||
+          key === "enableAllProjectMcpServers" ||
+          key === "enabledMcpjsonServers",
+      ) &&
+      JSON.stringify(parsed.hooks ?? {}).includes("--agent-context-hook");
+    if (!appOwned || keys.every((key) => key === "hooks")) return;
+    await writeFile(
+      hooksPath,
+      `${JSON.stringify({ hooks: parsed.hooks }, null, 2)}\n`,
+      { mode: 0o600 },
+    );
+  } catch {
+    // Missing or hand-mangled hooks stay untouched.
   }
 }
 
