@@ -337,6 +337,15 @@ test("both generated launchers bind exactly the opened project", async () => {
   );
   assert.match(codex, /args = \["--mcp", "--project-id", "bound-project"\]/);
   assert.doesNotMatch(codex, /project-a|project-b/);
+  // Codex hands an MCP server none of the display variables unless they are
+  // named, and on Linux the launcher cannot start without them.
+  assert.equal(
+    codex.includes(
+      'env_vars = ["DISPLAY", "WAYLAND_DISPLAY", "XAUTHORITY", "XDG_RUNTIME_DIR", "XDG_SESSION_TYPE"]\n',
+    ),
+    process.platform === "linux",
+  );
+  assert.equal(codex.includes("env_vars"), process.platform === "linux");
 
   const claudeHooks = JSON.parse(
     await readFile(
