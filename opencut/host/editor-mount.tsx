@@ -77,6 +77,11 @@ import {
 	type ArtifactFocusRequest,
 	type ArtifactFocusResult,
 } from "./artifact-focus-contract";
+import {
+	heldMediaReplacements,
+	mediaMapSources,
+	type HeldArtifactMedia,
+} from "./placeholder-media";
 
 export type HostEditorMediaAsset = {
 	artifact: {
@@ -593,6 +598,72 @@ function rewriteProjectMediaIds({
 	};
 }
 
+/** The host asset list's files that the media bin holds. */
+function heldHostMedia({
+	groupedAssets,
+	known,
+	map,
+}: {
+	groupedAssets: ReturnType<typeof groupHostMediaAssets>;
+	known: Set<string>;
+	map: HostMediaMap;
+}) {
+	const held: HeldArtifactMedia[] = [];
+	for (const [sourceKey, { aliases, asset }] of groupedAssets) {
+		const mapped = findMappedHostMedia({ aliases, map, sourceKey });
+		if (!mapped || !known.has(mapped.mediaId)) continue;
+		held.push({
+			artifactId: asset.artifact.artifactId,
+			hostAssetIds: [...aliases],
+			mediaId: mapped.mediaId,
+			sourceKey,
+			sourcePath: asset.artifact.sourcePath,
+		});
+	}
+	return held;
+}
+
+/** Point timeline elements whose media id the bin does not hold (an agent
+ * insert's `videofs-…` placeholder, or an id minted by another browser
+ * profile) at the bin's copy of the same file. */
+async function adoptHeldMedia({
+	editor,
+	groupedAssets,
+	known,
+	map,
+	placeholderSources,
+	projectId,
+}: {
+	editor: EditorCore;
+	groupedAssets: ReturnType<typeof groupHostMediaAssets>;
+	known: Set<string>;
+	map: HostMediaMap;
+	placeholderSources: ReadonlyMap<string, string>;
+	projectId: string;
+}) {
+	const activeProject = editor.project.getActiveOrNull();
+	if (!activeProject || activeProject.metadata.id !== projectId) return false;
+	const replacements = heldMediaReplacements({
+		heldMedia: heldHostMedia({ groupedAssets, known, map }),
+		knownMediaIds: known,
+		placeholderSources,
+		scenes: activeProject.scenes ?? [],
+	});
+	if (!replacements.size) return false;
+	const rewritten = rewriteProjectMediaIds({
+		project: activeProject,
+		replacements,
+	});
+	if (!rewritten.changed) return false;
+	editor.scenes.setScenes({
+		activeSceneId: rewritten.project.currentSceneId,
+		scenes: rewritten.project.scenes,
+	});
+	editor.project.setActiveProject({ project: rewritten.project });
+	await storageService.saveProject({ project: rewritten.project });
+	return true;
+}
+
 async function reconcileDuplicateHostMedia({
 	editor,
 	hostAssets,
@@ -784,6 +855,10 @@ function useHostBridge(
 	/** Revision of the last server doc this client synced against — sent as
 	 * baseRevision on pushes so a push can never clobber an unseen agent edit. */
 	const lastKnownRevisionRef = useRef<number | null>(null);
+	const mediaAssetsRef = useRef(mediaAssets);
+	useEffect(() => {
+		mediaAssetsRef.current = mediaAssets;
+	}, [mediaAssets]);
 	const mediaMapKey = opencutId ? `host-media-map-${opencutId}` : "";
 
 	// Media hydration: every host asset lands in the media bin exactly once.
@@ -803,16 +878,14 @@ function useHostBridge(
 			}
 			const map = readHostMediaMap(mediaMapKey);
 			const known = new Set(editor.media.getAssets().map((asset) => asset.id));
+			// Read before imports overwrite entries: a map seeded from the
+			// server copy can hold placeholder ids that elements still use.
+			const placeholderSources = mediaMapSources(map);
 			const groupedAssets = groupHostMediaAssets(mediaAssets);
 			let mapChanged = false;
 			for (const [sourceKey, { aliases, asset }] of groupedAssets) {
 				if (cancelled) return;
 				const mapped = findMappedHostMedia({ aliases, map, sourceKey });
-				// Agent inserts may pre-seed the map server-side with a
-				// placeholder id; once the real asset is minted below, the
-				// placeholder is adopted by remapping timeline elements.
-				const seededMediaId =
-					mapped && !known.has(mapped.mediaId) ? mapped.mediaId : null;
 				if (mapped && known.has(mapped.mediaId)) {
 					if (
 						asset.artifact.contentHash &&
@@ -887,64 +960,24 @@ function useHostBridge(
 						mapChanged = true;
 						known.add(added.id);
 						writeHostMediaMap(mediaMapKey, map);
-						const replacements = new Map<string, string>();
-						if (seededMediaId && seededMediaId !== added.id) {
-							replacements.set(seededMediaId, added.id);
-						}
-						// Elements carry their artifact identity; any element for
-						// THIS artifact whose media id is unknown here (seeded
-						// placeholder, or an id minted by another browser profile
-						// that has since left the map) is remapped to the fresh
-						// asset by that identity.
-						const activeForRemap = editor.project.getActiveOrNull();
-						if (activeForRemap) {
-							for (const scene of activeForRemap.scenes ?? []) {
-								const tracks = scene.tracks as unknown as {
-									audio?: Array<{ elements?: Array<Record<string, unknown>> }>;
-									main?: { elements?: Array<Record<string, unknown>> };
-									overlay?: Array<{ elements?: Array<Record<string, unknown>> }>;
-								};
-								const allTrackElements = [
-									...(tracks?.main?.elements ?? []),
-									...(tracks?.overlay ?? []).flatMap((t) => t.elements ?? []),
-									...(tracks?.audio ?? []).flatMap((t) => t.elements ?? []),
-								];
-								for (const element of allTrackElements) {
-									const identity = element.videoFsArtifact as
-										| { artifactId?: string }
-										| undefined;
-									const mediaId = element.mediaId;
-									if (
-										identity?.artifactId === asset.artifact.artifactId &&
-										typeof mediaId === "string" &&
-										mediaId !== added.id &&
-										!known.has(mediaId)
-									) {
-										replacements.set(mediaId, added.id);
-									}
-								}
-							}
-							if (replacements.size) {
-								const rewritten = rewriteProjectMediaIds({
-									project: activeForRemap,
-									replacements,
-								});
-								if (rewritten.changed) {
-									editor.scenes.setScenes({
-										activeSceneId: rewritten.project.currentSceneId,
-										scenes: rewritten.project.scenes,
-									});
-									editor.project.setActiveProject({ project: rewritten.project });
-									await storageService.saveProject({ project: rewritten.project });
-								}
-							}
-						}
 					}
 				} catch {
 					/* skip failed asset; retried next mount */
 				}
 			}
 			if (!cancelled) {
+				// Every file the bin holds, not only those imported in this pass:
+				// an element can reference a file that was imported earlier.
+				await adoptHeldMedia({
+					editor,
+					groupedAssets,
+					known,
+					map,
+					placeholderSources,
+					projectId: opencutId,
+				}).catch((caught) =>
+					console.warn("[editor-sync] failed to adopt placeholder media", caught),
+				);
 				const didReconcile = await reconcileDuplicateHostMedia({
 					editor,
 					hostAssets: mediaAssets,
@@ -1000,6 +1033,21 @@ function useHostBridge(
 							projectId: opencutId,
 							revision: doc.revision,
 						});
+						// The edit can place a file the bin already holds under a
+						// placeholder id, and hydration does not run again for that
+						// file. Adopting it here, in the queue that applied the
+						// edit, lets the next tick push the repaired project.
+						const editor = EditorCore.getInstance();
+						await adoptHeldMedia({
+							editor,
+							groupedAssets: groupHostMediaAssets(mediaAssetsRef.current),
+							known: new Set(editor.media.getAssets().map((asset) => asset.id)),
+							map: readHostMediaMap(mediaMapKey),
+							placeholderSources: mediaMapSources(doc.mediaMap),
+							projectId: opencutId,
+						}).catch((caught) =>
+							console.warn("[editor-sync] failed to adopt placeholder media", caught),
+						);
 					} catch (caught) {
 						console.warn("[editor-sync] failed to apply agent doc", caught);
 					}
