@@ -212,7 +212,8 @@ async function previewColourShare(page: Page) {
 
 async function showEditor(page: Page) {
   await page.getByRole("tab", { name: "Editor", exact: true }).click();
-  await expect(page.locator(".opencut-scope")).toBeVisible();
+  // The first visit compiles the Editor in dev mode.
+  await expect(page.locator(".opencut-scope")).toBeVisible({ timeout: 30_000 });
 }
 
 async function showCanvas(page: Page) {
@@ -260,7 +261,9 @@ async function resolveIdentity(
   return artifact;
 }
 
-/** The insert an agent sends through its MCP server (editor_edit). */
+/** The insert an agent sends through its MCP server (editor_edit). Like an
+ * agent, it reads the edit document again and retries when an Editor push
+ * made its revision stale. */
 async function placeByAgent(
   request: APIRequestContext,
   projectId: string,
@@ -268,35 +271,46 @@ async function placeByAgent(
   artifact: unknown,
   elementId: string,
 ) {
-  const doc = await readEditorDoc(request, projectId);
-  // The server writes a placeholder id only for a file its media map lacks.
-  // An open Editor sends its whole map with each push, so a push that lands
-  // between the import and this insert leaves nothing to test.
-  test.skip(
-    Object.keys(doc?.mediaMap ?? {}).includes(upload.id),
-    "the Editor pushed its media map, picture included, before the insert",
-  );
-  const response = await request.post("/api/paper/tools", {
-    data: {
-      arguments: {
-        action: "insert",
-        actor: { id: "smoke-agent", type: "agent" },
-        artifact,
-        baseEditorRevision: doc?.revision,
-        commandId: `insert-${elementId}`,
-        durationTicks: 4 * TICKS_PER_SECOND,
-        elementId,
-        idempotencyKey: `insert-${elementId}`,
-        origin: "mcp",
-        placement: { mode: "auto", trackType: "video" },
-        projectId,
-        startTimeTicks: 0,
+  for (let attempt = 1; ; attempt += 1) {
+    const doc = await readEditorDoc(request, projectId);
+    // The server writes a placeholder id only for a file its media map lacks.
+    // An open Editor sends its whole map with each push, so a push that lands
+    // between the import and this insert leaves nothing to test.
+    test.skip(
+      Object.keys(doc?.mediaMap ?? {}).includes(upload.id),
+      "the Editor pushed its media map, picture included, before the insert",
+    );
+    const response = await request.post("/api/paper/tools", {
+      data: {
+        arguments: {
+          action: "insert",
+          actor: { id: "smoke-agent", type: "agent" },
+          artifact,
+          baseEditorRevision: doc?.revision,
+          commandId: `insert-${elementId}`,
+          durationTicks: 4 * TICKS_PER_SECOND,
+          elementId,
+          idempotencyKey: `insert-${elementId}`,
+          origin: "mcp",
+          placement: { mode: "auto", trackType: "video" },
+          projectId,
+          startTimeTicks: 0,
+        },
+        tool: "editor_edit",
       },
-      tool: "editor_edit",
-    },
-    headers: { authorization: `Bearer ${MCP_TOKEN}` },
-  });
-  expect(response.status(), await response.text()).toBe(200);
+      headers: { authorization: `Bearer ${MCP_TOKEN}` },
+    });
+    const body = await response.text();
+    if (
+      response.status() === 409 &&
+      body.includes("EDITOR_REVISION_CONFLICT") &&
+      attempt < 3
+    ) {
+      continue;
+    }
+    expect(response.status(), body).toBe(200);
+    break;
+  }
   const placed = elementMediaId(
     (await readEditorDoc(request, projectId))?.project,
     elementId,
