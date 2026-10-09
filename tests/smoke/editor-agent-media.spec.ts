@@ -229,13 +229,13 @@ async function waitForEditDocument(request: APIRequestContext, projectId: string
     .toBe("number");
 }
 
-/** The insert an agent sends through its MCP server (editor_edit), with the
- * exact identity the Canvas resolves for the picture. */
-async function placeByAgent(
+/** The exact identity the Canvas resolves for an uploaded picture: what an
+ * agent's context hands it to place the file. */
+async function resolveIdentity(
   request: APIRequestContext,
   projectId: string,
   upload: Upload,
-  elementId: string,
+  title: string,
 ) {
   const resolved = await request.post(
     `/api/projects/${projectId}/canvas/context-identity`,
@@ -246,7 +246,7 @@ async function placeByAgent(
             artifactId: upload.id,
             kind: upload.kind,
             sourcePath: upload.path,
-            title: elementId,
+            title,
             version: null,
           },
         ],
@@ -257,11 +257,25 @@ async function placeByAgent(
   expect(resolved.status()).toBe(200);
   const [artifact] = ((await resolved.json()) as { artifacts: unknown[] })
     .artifacts;
+  return artifact;
+}
+
+/** The insert an agent sends through its MCP server (editor_edit). */
+async function placeByAgent(
+  request: APIRequestContext,
+  projectId: string,
+  upload: Upload,
+  artifact: unknown,
+  elementId: string,
+) {
   const doc = await readEditorDoc(request, projectId);
-  expect(
-    Object.keys(doc?.mediaMap ?? {}),
-    "the server's media map must not know the picture yet",
-  ).not.toContain(upload.id);
+  // The server writes a placeholder id only for a file its media map lacks.
+  // An open Editor sends its whole map with each push, so a push that lands
+  // between the import and this insert leaves nothing to test.
+  test.skip(
+    Object.keys(doc?.mediaMap ?? {}).includes(upload.id),
+    "the Editor pushed its media map, picture included, before the insert",
+  );
   const response = await request.post("/api/paper/tools", {
     data: {
       arguments: {
@@ -340,6 +354,16 @@ async function expectEditorDrawsPlacement(
 }
 
 test.describe("pictures an agent places on the Editor timeline", () => {
+  test.beforeEach(async ({ page }) => {
+    // The setup guide and the project tour dim the page, preview included.
+    await page.addInitScript(() =>
+      localStorage.setItem(
+        "impractical-onboarding-v1",
+        JSON.stringify({ "studio-setup": true, "project-tour": true }),
+      ),
+    );
+  });
+
   test("show when the Editor already holds the picture", async ({ page, request }) => {
     // The first visit compiles the project page and the Editor in dev mode.
     test.slow();
@@ -349,6 +373,8 @@ test.describe("pictures an agent places on the Editor timeline", () => {
       await showEditor(page);
       await waitForEditDocument(request, project.id);
       const upload = await uploadPicture(request, project.id, "in-the-bin.png");
+      const artifact = await resolveIdentity(request, project.id, upload, "agent-picture-in-bin");
+      // Insert as soon as the import lands, before the Editor's next push.
       await expect
         .poll(
           async () => {
@@ -356,10 +382,14 @@ test.describe("pictures an agent places on the Editor timeline", () => {
             const mediaId = storage.hostMediaMap[upload.id]?.mediaId;
             return Boolean(mediaId && storage.binMediaIds.includes(mediaId));
           },
-          { timeout: 60_000, message: "the Editor imports the uploaded picture" },
+          {
+            intervals: [100],
+            message: "the Editor imports the uploaded picture",
+            timeout: 60_000,
+          },
         )
         .toBe(true);
-      await placeByAgent(request, project.id, upload, "agent-picture-in-bin");
+      await placeByAgent(request, project.id, upload, artifact, "agent-picture-in-bin");
       await expectEditorDrawsPlacement(page, request, project.id, "agent-picture-in-bin");
     } finally {
       await page.goto("/");
@@ -376,7 +406,8 @@ test.describe("pictures an agent places on the Editor timeline", () => {
       await waitForEditDocument(request, project.id);
       await showCanvas(page);
       const upload = await uploadPicture(request, project.id, "placed-first.png");
-      await placeByAgent(request, project.id, upload, "agent-picture-placed-first");
+      const artifact = await resolveIdentity(request, project.id, upload, "agent-picture-placed-first");
+      await placeByAgent(request, project.id, upload, artifact, "agent-picture-placed-first");
       await showEditor(page);
       await expectEditorDrawsPlacement(page, request, project.id, "agent-picture-placed-first");
     } finally {

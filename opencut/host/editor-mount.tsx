@@ -1016,41 +1016,57 @@ function useHostBridge(
 					doc.revision > lastAppliedRevisionRef.current &&
 					doc.project
 				) {
-					try {
-						// The wire doc is raw JSON — dates are STRINGS. saveProject
-						// calls toISOString() on them, so hydrate first or the apply
-						// throws and the agent's edit silently never reaches the
-						// editor (and the next push clobbers it).
-						await storageService.saveProject({
-							project: hydrateWireProject(doc.project),
-						});
-						lastPushedRef.current = JSON.stringify(doc.project);
-						await EditorCore.getInstance().project.loadProject({ id: opencutId });
-						// Mark applied ONLY on success so a transient failure retries.
-						lastAppliedRevisionRef.current = doc.revision;
-						appliedAgentDoc = true;
-						dispatchEditorDocumentRevision(window, {
-							projectId: opencutId,
-							revision: doc.revision,
-						});
-						// The edit can place a file the bin already holds under a
-						// placeholder id, and hydration does not run again for that
-						// file. Adopting it here, in the queue that applied the
-						// edit, lets the next tick push the repaired project.
-						const editor = EditorCore.getInstance();
-						await adoptHeldMedia({
-							editor,
-							groupedAssets: groupHostMediaAssets(mediaAssetsRef.current),
-							known: new Set(editor.media.getAssets().map((asset) => asset.id)),
-							map: readHostMediaMap(mediaMapKey),
-							placeholderSources: mediaMapSources(doc.mediaMap),
-							projectId: opencutId,
-						}).catch((caught) =>
-							console.warn("[editor-sync] failed to adopt placeholder media", caught),
-						);
-					} catch (caught) {
-						console.warn("[editor-sync] failed to apply agent doc", caught);
-					}
+					const revision: number = doc.revision;
+					const applyAgentDoc = async () => {
+						if (cancelled) return false;
+						let applied = false;
+						try {
+							// The wire doc is raw JSON — dates are STRINGS. saveProject
+							// calls toISOString() on them, so hydrate first or the apply
+							// throws and the agent's edit silently never reaches the
+							// editor (and the next push clobbers it).
+							await storageService.saveProject({
+								project: hydrateWireProject(doc.project),
+							});
+							lastPushedRef.current = JSON.stringify(doc.project);
+							await EditorCore.getInstance().project.loadProject({ id: opencutId });
+							// Mark applied ONLY on success so a transient failure retries.
+							lastAppliedRevisionRef.current = revision;
+							applied = true;
+							dispatchEditorDocumentRevision(window, {
+								projectId: opencutId,
+								revision,
+							});
+							// The edit can place a file the bin already holds under a
+							// placeholder id, and hydration does not run again for that
+							// file. Adopting it here lets the next tick push the
+							// repaired project.
+							const editor = EditorCore.getInstance();
+							await adoptHeldMedia({
+								editor,
+								groupedAssets: groupHostMediaAssets(mediaAssetsRef.current),
+								known: new Set(editor.media.getAssets().map((asset) => asset.id)),
+								map: readHostMediaMap(mediaMapKey),
+								placeholderSources: mediaMapSources(doc.mediaMap),
+								projectId: opencutId,
+							}).catch((caught) =>
+								console.warn("[editor-sync] failed to adopt placeholder media", caught),
+							);
+						} catch (caught) {
+							console.warn("[editor-sync] failed to apply agent doc", caught);
+						}
+						return applied;
+					};
+					// Loading the project empties the media bin and refills it from
+					// storage. A hydration pass importing a file meanwhile can lose
+					// that file from the bin in memory while storage keeps it, and an
+					// element pointed at it then draws nothing. Applying the edit in
+					// the hydration queue keeps the two apart; it also runs after a
+					// pass that threw.
+					const queued = hydrationQueueRef.current.then(applyAgentDoc, applyAgentDoc);
+					hydrationQueueRef.current = queued.then(() => undefined);
+					appliedAgentDoc = await queued;
+					if (cancelled) return;
 				}
 				if (!appliedAgentDoc) {
 					const loaded = await storageService.loadProject({ id: opencutId });
