@@ -220,7 +220,7 @@ export function WelcomeModal({ onCreateProject }: { onCreateProject: () => Promi
   }
   const info = STEPS[step];
   return <Dialog open={open} onOpenChange={next => { if (!next && !busy) finish(); }}>
-    <DialogContent className={styles.flow} showClose={false} data-theme="light" aria-label="Welcome to Impractical" aria-labelledby={undefined} onOpenAutoFocus={event => { event.preventDefault(); document.querySelector<HTMLElement>("[data-studio-title]")?.focus(); }} onInteractOutside={event => event.preventDefault()}>
+    <DialogContent className={styles.flow} showClose={false} aria-label="Welcome to Impractical" aria-labelledby={undefined} onOpenAutoFocus={event => { event.preventDefault(); document.querySelector<HTMLElement>("[data-studio-title]")?.focus(); }} onInteractOutside={event => event.preventDefault()}>
       <header className={styles.header}>
         <div className={styles.progress} role="progressbar" aria-label="Setup progress" aria-valuemin={1} aria-valuemax={STEPS.length} aria-valuenow={step + 1} aria-valuetext={`Step ${step + 1} of ${STEPS.length}`}>
           <div className={styles.progressTrack} aria-hidden="true">{STEPS.map((_, i) => <i key={i} data-active={i <= step} />)}</div>
