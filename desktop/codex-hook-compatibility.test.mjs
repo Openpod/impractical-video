@@ -194,6 +194,8 @@ test("installed token-free Codex UserPromptSubmit launcher freezes and injects e
         "utf8",
       ),
     );
+    // Codex loads no hooks from a file with a top-level key it does not know.
+    assert.deepEqual(Object.keys(hooks), ["hooks"]);
     const command = hooks.hooks.UserPromptSubmit[0].hooks[0].command;
     assert.equal(
       command,

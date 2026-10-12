@@ -179,6 +179,49 @@ test("legacy app-owned Claude settings gain the explicit Video FS approval", asy
   assert.deepEqual(settings.enabledMcpjsonServers, ["video-fs"]);
 });
 
+test("legacy app-owned Codex hooks lose the Claude keys that make Codex reject the file", async () => {
+  const input = await fixture("legacy-codex-hooks");
+  const hooks = {
+    UserPromptSubmit: [
+      {
+        hooks: [
+          {
+            command:
+              "'/Applications/Video FS.app/Contents/MacOS/Video FS' --agent-context-hook --agent codex --project-id legacy-codex-hooks",
+            timeout: 5,
+            type: "command",
+          },
+        ],
+      },
+    ],
+  };
+  await mkdir(path.join(input.projectRoot, ".codex"));
+  await writeFile(
+    path.join(input.projectRoot, ".codex", "hooks.json"),
+    `${JSON.stringify(
+      {
+        enableAllProjectMcpServers: true,
+        enabledMcpjsonServers: ["video-fs"],
+        hooks,
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+
+  const result = await setupAgentProject(input);
+
+  assert.deepEqual(
+    JSON.parse(
+      await readFile(path.join(input.projectRoot, ".codex", "hooks.json"), "utf8"),
+    ),
+    { hooks },
+  );
+  // With the two keys gone the file is today's output, so nothing conflicts.
+  assert.deepEqual(result.conflicts, []);
+});
+
 test("fresh project becomes a valid Codex project root without user Git setup", async () => {
   const input = await fixture("codex-root");
   const first = await setupAgentProject(input);
