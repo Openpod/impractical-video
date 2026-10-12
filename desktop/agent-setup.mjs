@@ -21,6 +21,17 @@ import { validateProjectId } from "./project-binding.mjs";
 
 const GUIDE_NAME = "VIDEO_FS_AGENT_GUIDE.md";
 
+/** Codex starts an MCP server with a short fixed list of environment variables.
+ * On Linux the launcher is the desktop app, which exits at startup when it
+ * cannot reach the session's display, so Codex has to pass these on as well. */
+const CODEX_DISPLAY_ENV_VARS = [
+  "DISPLAY",
+  "WAYLAND_DISPLAY",
+  "XAUTHORITY",
+  "XDG_RUNTIME_DIR",
+  "XDG_SESSION_TYPE",
+];
+
 export function projectIdFromAppUrl(candidate, appUrl) {
   let url;
   try {
@@ -70,6 +81,9 @@ export async function setupAgentProject({ projectId: rawProjectId, state }) {
     "[mcp_servers.video-fs]",
     `command = ${tomlString(launcher.command)}`,
     `args = ${tomlStringArray(launcher.args)}`,
+    ...(process.platform === "linux"
+      ? [`env_vars = ${tomlStringArray(CODEX_DISPLAY_ENV_VARS)}`]
+      : []),
     "",
   ].join("\n");
   const claudeHookConfig = hookConfig(claudeHookLauncher);
