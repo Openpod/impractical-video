@@ -60,7 +60,12 @@ function commandStrings(value: unknown): string[] {
   if (typeof value === "string") return [value];
   if (Array.isArray(value)) return value.flatMap(commandStrings);
   if (!value || typeof value !== "object") return [];
-  return Object.values(value as Record<string, unknown>).flatMap(commandStrings);
+  const entry = value as Record<string, unknown>;
+  return [
+    // On Windows the Claude Code hook lists its arguments apart from its program.
+    ...(Array.isArray(entry.args) ? [[entry.command, ...entry.args].join(" ")] : []),
+    ...Object.values(entry).flatMap(commandStrings),
+  ];
 }
 
 function escapeRegularExpression(value: string) {

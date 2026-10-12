@@ -146,13 +146,17 @@ test("private state is atomically replaced at mode 0600 and stale records are re
     token: "a".repeat(43),
   };
   await writePrivateConnectionState(filePath, base);
-  assert.equal((await stat(filePath)).mode & 0o777, 0o600);
+  if (process.platform !== "win32") assert.equal((await stat(filePath)).mode & 0o777, 0o600);
   assert.equal((await readPrivateConnectionState(filePath)).token, base.token);
 
   const rotated = { ...base, token: "b".repeat(43) };
   await writePrivateConnectionState(filePath, rotated);
   assert.equal(JSON.parse(await readFile(filePath, "utf8")).token, rotated.token);
+  // The record written by the app must stay readable where mode bits do not exist.
+  assert.equal((await readPrivateConnectionState(filePath)).token, rotated.token);
 
+  // Windows has no group or other mode bits to reject.
+  if (process.platform === "win32") return;
   await chmod(filePath, 0o644);
   await assert.rejects(() => readPrivateConnectionState(filePath), /permissions must be 0600/);
 });

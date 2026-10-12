@@ -25,7 +25,7 @@ test("desktop refresh credentials are encrypted, private, restorable, and cleara
     const disk = await readFile(filePath);
     assert.equal(disk.includes(Buffer.from(refreshToken)), false);
     assert.notEqual(disk.toString("utf8"), refreshToken);
-    assert.equal((await stat(filePath)).mode & 0o777, 0o600);
+    if (process.platform !== "win32") assert.equal((await stat(filePath)).mode & 0o777, 0o600);
     assert.equal(await readDesktopAuthSession(filePath, safeStorage), refreshToken);
     await clearDesktopAuthSession(filePath);
     assert.equal(await readDesktopAuthSession(filePath, safeStorage), null);

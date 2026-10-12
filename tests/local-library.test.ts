@@ -26,8 +26,11 @@ describe("local Library uploads", () => {
     expect((await listLocalLibraryUploads()).map(asset => asset.kind).sort()).toEqual(["audio", "document", "image", "image", "video"]);
     const asset = await localLibraryFile(ids[0]);
     expect(await readFile(asset.absolutePath, "utf8")).toBe("image");
-    expect((await stat(asset.absolutePath)).mode & 0o777).toBe(0o600);
-    expect((await stat(path.dirname(asset.absolutePath))).mode & 0o777).toBe(0o700);
+    // Windows has no owner-only mode bits to assert.
+    if (process.platform !== "win32") {
+      expect((await stat(asset.absolutePath)).mode & 0o777).toBe(0o600);
+      expect((await stat(path.dirname(asset.absolutePath))).mode & 0o777).toBe(0o700);
+    }
     expect(JSON.stringify(await getLocalLibraryUpload(ids[0]))).not.toContain(temporary);
   });
 

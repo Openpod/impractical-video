@@ -214,13 +214,32 @@ export async function ensureProjectsRoot() {
   await mkdir(DATA_ROOT, { recursive: true });
 }
 
+/** Windows refuses to replace a file while another handle to it is open, and
+ * to move a folder while a file inside it is open, so a read that overlaps the
+ * rename fails it with EPERM. Readers and virus scanners let go within
+ * milliseconds: wait for the gap instead of losing the write or the delete. */
+async function renameOverReaders(source: string, target: string) {
+  const deadline = Date.now() + 10_000;
+  for (let delay = 5; ; delay = Math.min(delay * 2, 100)) {
+    try {
+      await rename(source, target);
+      return;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      const busy = code === "EPERM" || code === "EACCES" || code === "EBUSY";
+      if (process.platform !== "win32" || !busy || Date.now() > deadline) throw error;
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+}
+
 async function writeAtomicText(target: string, content: string) {
   // A same-directory rename publishes the complete file in one step. Reads
   // during background work must never see writeFile's truncate/write window.
   const temporary = path.join(path.dirname(target), `.video-fs-write-${randomUUID()}.tmp`);
   try {
     await writeFile(temporary, content, { encoding: "utf8", flag: "wx", mode: 0o600 });
-    await rename(temporary, target);
+    await renameOverReaders(temporary, target);
   } finally {
     await rm(temporary, { force: true });
   }
@@ -829,7 +848,7 @@ export async function deleteProject(projectId: string, ownerUserId?: string | nu
     JSON.stringify({ ...meta, deletedAt: nowIso(), originalId: projectId }, null, 2),
     "utf8",
   );
-  await rename(source, target);
+  await renameOverReaders(source, target);
   return { id: projectId, trashed_path: path.relative(process.cwd(), target).replaceAll(path.sep, "/") };
 }
 

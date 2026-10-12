@@ -6,7 +6,7 @@ import { EventEmitter } from "node:events";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { AGENT_CHARTER } from "@/lib/agent-charter";
-import { localAgentCliEnv, resolveAgentBinary } from "@/lib/agent-binaries";
+import { agentCliLaunch, localAgentCliEnv, resolveAgentBinary } from "@/lib/agent-binaries";
 import { ensureAgentContextRoot } from "@/lib/agent-context/paths";
 import {
   COMPANION_MODELS,
@@ -476,7 +476,8 @@ async function spawnSession(
   const storePath = await companionStorePath(projectId);
   const mcpConfigPath = path.join(projectDirectory, ".mcp.json");
   const resumeSessionId = carryover?.resumeSessionId ?? null;
-  const child = spawn(
+  const environment = localAgentCliEnv();
+  const launch = agentCliLaunch(
     binary,
     [
       "-p",
@@ -506,12 +507,15 @@ async function spawnSession(
       model,
       ...(resumeSessionId ? ["--resume", resumeSessionId] : []),
     ],
-    {
-      cwd: projectDirectory,
-      env: localAgentCliEnv(),
-      stdio: ["pipe", "pipe", "pipe"],
-    },
+    environment,
   );
+  const child = spawn(launch.command, launch.args, {
+    cwd: projectDirectory,
+    env: environment,
+    stdio: ["pipe", "pipe", "pipe"],
+    windowsHide: true,
+    windowsVerbatimArguments: launch.windowsVerbatimArguments,
+  });
   const session: CompanionSession = {
     agent: "claude",
     busy: false,

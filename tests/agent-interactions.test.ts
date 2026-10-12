@@ -104,7 +104,7 @@ describe("durable agent input and approval requests", () => {
         "agent-requests",
         "request_input_1.json",
       );
-      expect((await stat(recordPath)).mode & 0o777).toBe(0o600);
+      if (process.platform !== "win32") expect((await stat(recordPath)).mode & 0o777).toBe(0o600);
       expect(JSON.parse(await readFile(recordPath, "utf8"))).toMatchObject({
         projectId,
         question: "Which frame should lead?",

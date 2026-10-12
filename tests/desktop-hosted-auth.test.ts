@@ -37,7 +37,11 @@ const SECRET = "desktop-auth-test-secret-that-is-more-than-thirty-two-characters
 const VERIFIER = Buffer.alloc(32, 7).toString("base64url");
 let issuedToken: string;
 
-function clerkToken(exp = Math.floor(Date.now() / 1000) + 600) {
+// One expiry for the whole run: a token made again after the clock passes a
+// second boundary would no longer equal the one the mock handed out.
+const CLERK_TOKEN_EXPIRY = Math.floor(Date.now() / 1000) + 600;
+
+function clerkToken(exp = CLERK_TOKEN_EXPIRY) {
   const encode = (value: unknown) => Buffer.from(JSON.stringify(value)).toString("base64url");
   return `${encode({ alg: "none" })}.${encode({ exp, sub: "user_desktop" })}.sig`;
 }

@@ -84,7 +84,8 @@ function skillIdFromPath(filePath: string) {
 }
 
 async function readSkillFile(filePath: string): Promise<LoadedSkill> {
-  const content = await readFile(filePath, "utf8");
+  // A CRLF checkout or editor must not hide the frontmatter fence.
+  const content = (await readFile(filePath, "utf8")).replace(/\r\n/g, "\n");
   const { frontmatter, body } = splitFrontmatter(content);
   const id = yamlValue(frontmatter, "name") || skillIdFromPath(filePath);
   const description = yamlValue(frontmatter, "description");

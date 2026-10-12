@@ -70,7 +70,7 @@ test("persists mode-0600 window/display state", async () => {
   };
   await writeCompanionWindowState(file, state);
   assert.deepEqual(await readCompanionWindowState(file), state);
-  assert.equal((await stat(file)).mode & 0o777, 0o600);
+  if (process.platform !== "win32") assert.equal((await stat(file)).mode & 0o777, 0o600);
   assert.ok(JSON.parse(await readFile(file, "utf8")));
 });
 
@@ -93,5 +93,5 @@ test("persists only supported per-project models with mode-0600", async () => {
     "project-a": "opus",
     "project-b": "haiku",
   });
-  assert.equal((await stat(file)).mode & 0o777, 0o600);
+  if (process.platform !== "win32") assert.equal((await stat(file)).mode & 0o777, 0o600);
 });

@@ -27,6 +27,7 @@
       "connection-state.mjs",
       "auth-session-store.mjs",
       "project-binding.mjs",
+      "standard-input.mjs",
       "generated/paper-mcp.mjs",
       "package.json",
       "cloud-config.mjs",

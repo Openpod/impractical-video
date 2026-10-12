@@ -64,7 +64,8 @@ function splitFrontmatter(content: string) {
 }
 
 async function readWorkflowFile(filePath: string): Promise<LoadedWorkflow> {
-  const content = await readFile(filePath, "utf8");
+  // A CRLF checkout or editor must not hide the frontmatter fence.
+  const content = (await readFile(filePath, "utf8")).replace(/\r\n/g, "\n");
   const { frontmatter, body } = splitFrontmatter(content);
   const id =
     yamlValue(frontmatter, "name") ||

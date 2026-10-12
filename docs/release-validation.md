@@ -68,8 +68,10 @@ needs further optimization before distributing desktop binaries.
 
 This validation does not exercise paid provider generation, hosted billing,
 Apple signing/notarization, auto-updates, Windows, or Linux desktop behavior.
-The [Linux CI workflow](https://github.com/Openpod/impractical-video/actions/workflows/ci.yml)
-reports its own results for every public commit. It provisions Electron's sandbox
-helper and a virtual display for the installed-hook test.
+The [CI workflow](https://github.com/Openpod/impractical-video/actions/workflows/ci.yml)
+reports its own results for every public commit. On Linux it provisions Electron's
+sandbox helper and a virtual display for the installed-hook test. On Windows it
+runs lint, TypeScript, the Vitest and desktop tests, setup, and the production
+build; the browser suite runs on Linux only.
 The clean export contains no Git history; the original repository history has
 not been cleared for public release. See [releasing.md](releasing.md).

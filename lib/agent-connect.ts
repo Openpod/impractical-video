@@ -1,8 +1,15 @@
 import "server-only";
 
 import { spawn, execFile, type ChildProcess } from "node:child_process";
+import path from "node:path";
 import { promisify } from "node:util";
-import { localAgentCliEnv, resolveAgentBinary } from "@/lib/agent-binaries";
+import {
+  agentCliLaunch,
+  localAgentCliEnv,
+  resolveAgentBinary,
+  resolveCommand,
+  stopAgentCli,
+} from "@/lib/agent-binaries";
 
 const execFileAsync = promisify(execFile);
 
@@ -35,6 +42,11 @@ const store = globalThis as typeof globalThis & {
 const jobs = store.__videoFsAgentConnectJobs ?? new Map<ConnectAgent, ConnectJob>();
 store.__videoFsAgentConnectJobs = jobs;
 
+const AGENT_NAMES: Record<ConnectAgent, string> = {
+  claude: "Claude Code",
+  codex: "Codex",
+};
+
 /** Fresh installs land in paths a GUI-launched app may not have. */
 function connectEnv() {
   return localAgentCliEnv();
@@ -44,36 +56,64 @@ async function binaryAvailable(binary: ConnectAgent) {
   return Boolean(await resolveAgentBinary(binary));
 }
 
+function windowsSystemProgram(...segments: string[]) {
+  return path.join(process.env.SystemRoot || "C:\\Windows", "System32", ...segments);
+}
+
+const STATUS_COMMANDS: Record<ConnectAgent, string[]> = {
+  claude: ["auth", "status"],
+  codex: ["login", "status"],
+};
+
 /** Signed-in check through each CLI's own status command. */
 export async function agentSignedIn(agent: ConnectAgent) {
   try {
-    if (agent === "claude") {
-      const { stdout } = await execFileAsync(
-        "/usr/bin/env",
-        ["claude", "auth", "status"],
-        { env: connectEnv(), timeout: 8000 },
-      );
-      const parsed = JSON.parse(stdout.trim()) as { loggedIn?: boolean };
-      return parsed.loggedIn === true;
-    }
-    await execFileAsync("/usr/bin/env", ["codex", "login", "status"], {
-      env: connectEnv(),
+    const environment = connectEnv();
+    const binary = await resolveAgentBinary(agent, undefined, environment);
+    if (!binary) return false;
+    const launch = agentCliLaunch(binary, STATUS_COMMANDS[agent], environment);
+    const { stdout } = await execFileAsync(launch.command, launch.args, {
+      env: environment,
       timeout: 8000,
+      windowsHide: true,
+      windowsVerbatimArguments: launch.windowsVerbatimArguments,
     });
-    return true;
+    if (agent === "codex") return true;
+    const parsed = JSON.parse(stdout.trim()) as { loggedIn?: boolean };
+    return parsed.loggedIn === true;
   } catch {
     return false;
   }
 }
 
-const INSTALL_COMMANDS: Record<ConnectAgent, [string, string[]]> = {
-  claude: ["/bin/bash", ["-c", "curl -fsSL https://claude.ai/install.sh | bash"]],
-  codex: ["/usr/bin/env", ["npm", "install", "-g", "@openai/codex"]],
-};
+/** Each provider's own installer: Claude's script for the platform, Codex from npm. */
+async function installCommand(
+  agent: ConnectAgent,
+  environment: NodeJS.ProcessEnv,
+): Promise<[string, string[]]> {
+  if (agent === "claude") {
+    if (process.platform !== "win32") {
+      return ["/bin/bash", ["-c", "curl -fsSL https://claude.ai/install.sh | bash"]];
+    }
+    // An app started from PowerShell 7 inherits its module path, which hides
+    // Windows PowerShell's own Get-FileHash from the installer. Without the
+    // variable Windows PowerShell falls back to its own modules.
+    for (const key of Object.keys(environment)) {
+      if (key.toUpperCase() === "PSMODULEPATH") delete environment[key];
+    }
+    return [
+      windowsSystemProgram("WindowsPowerShell", "v1.0", "powershell.exe"),
+      ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "irm https://claude.ai/install.ps1 | iex"],
+    ];
+  }
+  const npm = await resolveCommand("npm", environment);
+  if (!npm) throw new Error("npm was not found. Install Node.js, then connect Codex again.");
+  return [npm, ["install", "-g", "@openai/codex"]];
+}
 
 const LOGIN_COMMANDS: Record<ConnectAgent, string[]> = {
-  claude: ["claude", "auth", "login", "--claudeai"],
-  codex: ["codex", "login"],
+  claude: ["auth", "login", "--claudeai"],
+  codex: ["login"],
 };
 
 function setStage(job: ConnectJob, stage: ConnectStage, detail?: string | null) {
@@ -81,13 +121,55 @@ function setStage(job: ConnectJob, stage: ConnectStage, detail?: string | null) 
   job.detail = detail ?? null;
 }
 
-function startLogin(job: ConnectJob) {
-  setStage(job, "awaiting_browser");
-  const child = spawn("/usr/bin/env", LOGIN_COMMANDS[job.agent], {
-    env: connectEnv(),
+/** Opens the provider's sign-in page in the default browser. The address is
+ * handed over as a single argument and never passes through a shell. */
+function openInBrowser(url: string) {
+  const [command, args]: [string, string[]] =
+    process.platform === "win32"
+      ? [windowsSystemProgram("rundll32.exe"), ["url.dll,FileProtocolHandler", url]]
+      : process.platform === "darwin"
+        ? ["open", [url]]
+        : ["xdg-open", [url]];
+  spawn(command, args, { stdio: "ignore", windowsHide: true }).on("error", () => {});
+}
+
+/** Starts a CLI command for a job. Resolving the program is asynchronous, so a
+ * cancel or a newer job may have taken over by the time it is found. */
+async function startJobProcess(
+  job: ConnectJob,
+  stage: ConnectStage,
+  resolve: (environment: NodeJS.ProcessEnv) => Promise<[string, string[]]>,
+) {
+  const environment = connectEnv();
+  const [command, args] = await resolve(environment);
+  if (jobs.get(job.agent) !== job || job.stage !== stage) return null;
+  const launch = agentCliLaunch(command, args, environment);
+  const child = spawn(launch.command, launch.args, {
+    env: environment,
     stdio: ["ignore", "pipe", "pipe"],
+    windowsHide: true,
+    windowsVerbatimArguments: launch.windowsVerbatimArguments,
   });
   job.child = child;
+  return child;
+}
+
+async function startLogin(job: ConnectJob) {
+  setStage(job, "awaiting_browser");
+  let child: ChildProcess | null;
+  try {
+    child = await startJobProcess(job, "awaiting_browser", async (environment) => {
+      const binary = await resolveAgentBinary(job.agent, undefined, environment);
+      if (!binary) {
+        throw new Error(`${AGENT_NAMES[job.agent]} could not be found after installing. Restart the app and connect again.`);
+      }
+      return [binary, LOGIN_COMMANDS[job.agent]];
+    });
+  } catch (error) {
+    setStage(job, "error", error instanceof Error ? error.message : "Sign-in could not start.");
+    return;
+  }
+  if (!child) return;
   let output = "";
   let opened = false;
   const scan = (chunk: string) => {
@@ -98,7 +180,7 @@ function startLogin(job: ConnectJob) {
     const url = /https:\/\/[^\s"'\])]+/.exec(chunk)?.[0];
     if (url && /login|auth|oauth|authorize|sso/i.test(url)) {
       opened = true;
-      spawn("open", [url], { stdio: "ignore" }).on("error", () => {});
+      openInBrowser(url);
     }
   };
   child.stdout?.setEncoding("utf8");
@@ -146,17 +228,19 @@ export async function startAgentConnect(agent: ConnectAgent) {
       setStage(job, "connected");
       return agentConnectStatus(agent);
     }
-    startLogin(job);
+    await startLogin(job);
     return agentConnectStatus(agent);
   }
 
   setStage(job, "installing");
-  const [command, args] = INSTALL_COMMANDS[agent];
-  const child = spawn(command, args, {
-    env: connectEnv(),
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  job.child = child;
+  let child: ChildProcess | null;
+  try {
+    child = await startJobProcess(job, "installing", (environment) => installCommand(agent, environment));
+  } catch (error) {
+    setStage(job, "error", error instanceof Error ? error.message : "The installer could not start.");
+    return agentConnectStatus(agent);
+  }
+  if (!child) return agentConnectStatus(agent);
   let output = "";
   const capture = (chunk: string) => {
     output = `${output}${chunk}`.slice(-8000);
@@ -173,7 +257,7 @@ export async function startAgentConnect(agent: ConnectAgent) {
     job.child = null;
     if (job.stage === "idle") return; // cancelled
     if (code === 0) {
-      startLogin(job);
+      void startLogin(job);
     } else {
       setStage(
         job,
@@ -189,7 +273,7 @@ export function cancelAgentConnect(agent: ConnectAgent) {
   const job = jobs.get(agent);
   if (!job) return false;
   setStage(job, "idle");
-  job.child?.kill("SIGTERM");
+  if (job.child) stopAgentCli(job.child);
   job.child = null;
   return true;
 }

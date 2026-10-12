@@ -1,0 +1,6 @@
+# The Markdown and JSON loaders, and the tests that read source files, match
+# "\n". Git for Windows checks text out as CRLF unless told otherwise.
+* text=auto eol=lf
+
+# The vendored editor keeps the bytes it has upstream.
+opencut/** -text

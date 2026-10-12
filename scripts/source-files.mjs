@@ -5,7 +5,7 @@ import path from "node:path";
 // test renders and an upstream reference repository. None belong in a release.
 const directories = [".github", "app", "components", "database", "desktop", "docs/images", "lib", "modal", "opencut", "public", "scripts/video_tracking", "skills", "src", "supabase", "templates", "tests", "types", "workflows"];
 const files = [
-  ".env.example", ".env.local.example", ".gitignore", ".nvmrc", ".vercelignore",
+  ".env.example", ".env.local.example", ".gitattributes", ".gitignore", ".nvmrc", ".vercelignore",
   "LICENSE", "NOTICE", "THIRD_PARTY_NOTICES.md", "README.md", "CONTRIBUTING.md", "SECURITY.md", "CLAUDE.md", "AGENTS.md",
   "package.json", "package-lock.json", "next.config.ts", "next-env.d.ts", "tsconfig.json",
   "middleware.ts", "postcss.config.mjs", "eslint.config.mjs", "vitest.config.ts", "trigger.config.ts", "playwright.config.ts",

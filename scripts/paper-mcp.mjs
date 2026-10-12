@@ -9,6 +9,7 @@ import {
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { resolveBoundProjectId } from "../desktop/project-binding.mjs";
+import { standardInput } from "../desktop/standard-input.mjs";
 
 const appUrl = (process.env.VIDEO_FS_APP_URL || "http://127.0.0.1:3000").replace(/\/+$/, "");
 const defaultProjectId = process.env.VIDEO_FS_PROJECT_ID || null;
@@ -1139,7 +1140,7 @@ if (defaultProjectId) {
   );
 }
 
-const transport = new StdioServerTransport();
+const transport = new StdioServerTransport(standardInput(), process.stdout);
 await server.connect(transport);
 
 // Presence heartbeat: this process only lives while an agent session keeps the

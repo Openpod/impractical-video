@@ -36,6 +36,7 @@ import {
   readPrivateConnectionState,
   writePrivateConnectionState,
 } from "./connection-state.mjs";
+import { standardInput } from "./standard-input.mjs";
 import { desktopWindowOptions } from "./window-options.mjs";
 import {
   readCompanionWindowState,
@@ -277,15 +278,16 @@ if (process.argv.includes("--mcp")) {
 function readStdin() {
   return new Promise((resolve, reject) => {
     let value = "";
-    process.stdin.setEncoding("utf8");
-    process.stdin.on("data", (chunk) => {
+    const stdin = standardInput();
+    stdin.setEncoding("utf8");
+    stdin.on("data", (chunk) => {
       value += chunk;
       if (Buffer.byteLength(value) > 256 * 1024) {
         reject(new Error("Hook input is too large."));
       }
     });
-    process.stdin.on("end", () => resolve(value));
-    process.stdin.on("error", reject);
+    stdin.on("end", () => resolve(value));
+    stdin.on("error", reject);
   });
 }
 

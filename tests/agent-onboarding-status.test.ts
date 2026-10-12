@@ -62,6 +62,33 @@ describe("agent onboarding UI status", () => {
     });
   });
 
+  it("recognizes the Claude hook written for Windows, with its arguments as a list", () => {
+    const claudeHook = (boundProjectId: string) =>
+      JSON.stringify({
+        hooks: {
+          UserPromptSubmit: [
+            {
+              hooks: [
+                {
+                  args: ["--agent-context-hook", "--agent", "claude", "--project-id", boundProjectId],
+                  command: "C:\\Program Files\\Video FS\\Video FS.exe",
+                  type: "command",
+                },
+              ],
+            },
+          ],
+        },
+      });
+    const status = (boundProjectId: string) =>
+      agentOnboardingStatusFromFiles(
+        { ...generatedFiles(), claudeHook: claudeHook(boundProjectId) },
+        projectId,
+        true,
+      );
+    expect(status(projectId).claude.contextHookInstalled).toBe(true);
+    expect(status(`${projectId}-extra`).claude.contextHookInstalled).toBe(false);
+  });
+
   it("does not call a config installed when it is bound to another project", () => {
     const status = agentOnboardingStatusFromFiles(
       generatedFiles(`${projectId}-extra`),

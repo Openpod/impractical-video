@@ -1,3 +1,6 @@
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { listSkillSummaries } from "@/lib/skills";
 import { listWorkflowSummaries, readWorkflow } from "@/lib/workflows";
@@ -112,5 +115,44 @@ describe("workflow loader contract", () => {
       expect.objectContaining({ id: workflowId, title: "Vertical Story Episode" }),
     );
     expect(services.ensureCurrentAppUser).toHaveBeenCalledOnce();
+  });
+
+  it("reads workflow and skill frontmatter from files with CRLF line endings", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "video-fs-crlf-"));
+    const crlf = (lines: string[]) => lines.join("\r\n");
+    await mkdir(path.join(root, "workflows"));
+    await mkdir(path.join(root, "skills", "windows-checkout"), { recursive: true });
+    await writeFile(path.join(root, "workflows", "windows-checkout.md"), crlf([
+      "---", "name: windows-checkout", "title: Windows Checkout", "category: Testing",
+      "description: Loads from a CRLF working tree.", "---", "", "# Method", "",
+    ]));
+    await writeFile(path.join(root, "skills", "windows-checkout", "SKILL.md"), crlf([
+      "---", "name: windows-checkout", "description: >-", "  Folded text", "  on two lines.",
+      "tags: [windows, checkout]", "---", "", "# Skill", "",
+    ]));
+    vi.resetModules();
+    const cwd = vi.spyOn(process, "cwd").mockReturnValue(root);
+    try {
+      const [workflows, skills] = await Promise.all([import("@/lib/workflows"), import("@/lib/skills")]);
+      expect(await workflows.listWorkflowSummaries()).toEqual([{
+        category: "Testing",
+        description: "Loads from a CRLF working tree.",
+        id: "windows-checkout",
+        path: "workflows/windows-checkout.md",
+        title: "Windows Checkout",
+        use_when: "Loads from a CRLF working tree.",
+      }]);
+      expect(await skills.listSkillSummaries()).toEqual([{
+        description: "Folded text on two lines.",
+        id: "windows-checkout",
+        path: "skills/windows-checkout/SKILL.md",
+        tags: ["windows", "checkout"],
+        use_when_summary: "Folded text on two lines.",
+      }]);
+      expect((await workflows.readWorkflow("windows-checkout")).content).not.toContain("\r");
+    } finally {
+      cwd.mockRestore();
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });

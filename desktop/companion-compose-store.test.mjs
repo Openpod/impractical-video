@@ -39,7 +39,7 @@ test("persists a versioned per-project compose state atomically at mode 0600", a
   const second = await writeCompanionCompose(directory, "project-a", state);
   assert.equal(first.changed, true);
   assert.equal(second.changed, false);
-  assert.equal((await stat(file)).mode & 0o777, 0o600);
+  if (process.platform !== "win32") assert.equal((await stat(file)).mode & 0o777, 0o600);
   assert.equal((await stat(file)).mtimeMs, firstMtime);
   assert.deepEqual((await readCompanionCompose(directory, "project-a")).state, state);
 });
@@ -61,10 +61,8 @@ test("stores private attachments by content hash without retaining source paths"
     "utf8",
   );
   assert.equal(stateText.includes("/Users/person"), false);
-  assert.equal(
-    (await stat(path.join(directory, "blobs", stored.hash))).mode & 0o777,
-    0o600,
-  );
+  const blobMode = (await stat(path.join(directory, "blobs", stored.hash))).mode & 0o777;
+  if (process.platform !== "win32") assert.equal(blobMode, 0o600);
   assert.equal(
     Buffer.from(
       (await readCompanionAttachment(directory, "project-a", stored.hash)).data,
@@ -117,6 +115,8 @@ test("reports missing, unreadable, and stale private blobs", async () => {
     /changed/,
   );
   await writeFile(blob, "original");
+  // A Windows file mode cannot take read access away.
+  if (process.platform === "win32") return;
   await chmod(blob, 0o000);
   const issue = (await readCompanionCompose(directory, "project-a")).issues[0];
   assert.match(issue.message, /unreadable|changed/);

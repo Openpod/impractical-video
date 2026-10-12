@@ -10,13 +10,17 @@ function check(label, ok, help, required = true) {
   if (!ok && required) failed = true;
 }
 function installed(command, args = ["--version"]) {
-  return spawnSync(command, args, { stdio: "ignore", timeout: 10_000 }).status === 0;
+  const options = { stdio: "ignore", timeout: 10_000 };
+  if (process.platform !== "win32") return spawnSync(command, args, options).status === 0;
+  // npm installs Windows commands as .cmd launchers, which only cmd.exe starts.
+  // No Windows file name holds a double quote, so the quoted name stays one word.
+  return !command.includes('"') && spawnSync(`"${command}" ${args.join(" ")}`, { ...options, shell: true }).status === 0;
 }
 check("Node.js 22.13+", Number(process.versions.node.split(".")[0]) > 22 || (Number(process.versions.node.split(".")[0]) === 22 && Number(process.versions.node.split(".")[1]) >= 13), "Use the Node version in .nvmrc.");
 check("Git", installed("git"), "Install Git for agent project setup.");
 check("Local mode", process.env.APP_MODE === "local" && process.env.NEXT_PUBLIC_APP_MODE === "local", "Set APP_MODE=local and NEXT_PUBLIC_APP_MODE=local in .env.local.");
 check("MCP credential", Boolean(process.env.PAPER_MCP_TOKEN?.trim()), "Run npm run setup on a fresh checkout, or set PAPER_MCP_TOKEN to a random secret.");
-check("FFmpeg", installed("ffmpeg", ["-version"]) && installed("ffprobe", ["-version"]), "Install ffmpeg for media processing (brew install ffmpeg / apt install ffmpeg).", false);
+check("FFmpeg", installed("ffmpeg", ["-version"]) && installed("ffprobe", ["-version"]), `Install ffmpeg for media processing (${process.platform === "win32" ? "winget install Gyan.FFmpeg, then open a new terminal" : "brew install ffmpeg / apt install ffmpeg"}).`, false);
 check("Agent CLI", process.env.VIDEO_FS_COMPOSER_CLI ? installed(process.env.VIDEO_FS_COMPOSER_CLI) : installed("claude") || installed("codex"), "Install and sign into Claude Code or Codex for agent prompts.", false);
 const dataRoot = process.env.VIDEO_FS_DATA_ROOT?.trim() || path.join(process.cwd(), "data", "projects");
 const settingsRoot = process.env.VIDEO_FS_SETTINGS_ROOT?.trim() || path.join(path.dirname(dataRoot), "settings");

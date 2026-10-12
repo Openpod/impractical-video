@@ -33,7 +33,8 @@ See [validation and limitations](docs/release-validation.md).
 ## Quickstart
 
 Requirements: **Node.js 22.13+**, npm, and Git. macOS is the primary desktop
-platform; the local web app can also run on Linux. Windows is not yet verified.
+platform; the local web app can also run on Linux. On Windows the checks, setup,
+and production build pass in CI; the desktop app is not yet verified by hand.
 
 ```bash
 git clone https://github.com/Openpod/impractical-video.git
@@ -83,8 +84,9 @@ copies already added to projects intact.
 | Explore character examples, environments, styles, and videos | Internet access; the public Impractical catalog needs no account or API key |
 | Hosted accounts, billing and shared catalogs | A separately configured hosted deployment |
 
-Install FFmpeg with `brew install ffmpeg` on macOS or `sudo apt install ffmpeg`
-on Debian/Ubuntu. Restart the app after changing environment variables.
+Install FFmpeg with `brew install ffmpeg` on macOS, `sudo apt install ffmpeg`
+on Debian/Ubuntu, or `winget install Gyan.FFmpeg` on Windows. Restart the app
+after changing environment variables.
 Generation is not offline; prompts and selected media are sent to the provider
 when you request generation. Purchasing Impractical credits explicitly connects
 Desktop to the hosted account, checkout and generation service.

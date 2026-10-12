@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { localAgentCliEnv, resolveAgentBinary } from "@/lib/agent-binaries";
+import { agentCliLaunch, localAgentCliEnv, resolveAgentBinary, stopAgentCli } from "@/lib/agent-binaries";
 
 /** How the local composer reaches the reasoner: the user's own Claude Code or
  * Codex CLI, headless, cwd-bound to the project so the desktop hooks inject
@@ -90,20 +90,27 @@ export async function runCliComposer({
     );
   }
   const { agent, binary } = resolved;
-  const args = agent === "claude" ? claudeArgs(prompt) : codexArgs(prompt);
+  const environment = localAgentCliEnv();
+  const launch = agentCliLaunch(
+    binary,
+    agent === "claude" ? claudeArgs(prompt) : codexArgs(prompt),
+    environment,
+  );
 
   return await new Promise<CliComposerResult>((resolve, reject) => {
-    const child = spawn(binary, args, {
+    const child = spawn(launch.command, launch.args, {
       cwd,
-      env: localAgentCliEnv(),
+      env: environment,
       stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true,
+      windowsVerbatimArguments: launch.windowsVerbatimArguments,
     });
     const toolNamesById = new Map<string, string>();
     let finalText = "";
     let stderrTail = "";
     let buffered = "";
     const timeout = setTimeout(() => {
-      child.kill("SIGKILL");
+      stopAgentCli(child, "SIGKILL");
       reject(new Error("The local agent run timed out."));
     }, CLI_TIMEOUT_MS);
 

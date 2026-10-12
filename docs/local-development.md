@@ -21,6 +21,7 @@ box. `VIDEO_FS_COMPOSER_CLI` can select an absolute executable path. The CLI use
 its own authenticated account. The app's provider keys are not agent credentials.
 Setup checks both installations without sending a prompt. Finder-launched
 Desktop also searches the standard native, Homebrew, npm and Volta locations.
+On Windows it searches `%USERPROFILE%\.local\bin` and `%APPDATA%\npm`.
 Claude powers the in-app companion; Claude and Codex both support the project
 terminal. Use **Account → Setup guide** to recheck or connect them.
 
@@ -50,7 +51,8 @@ absolute `VIDEO_FS_SETTINGS_ROOT` can override the directory; keep it outside
 project and shared directories.
 
 The file is plain JSON, written atomically with owner-only permissions on
-macOS/Linux (directory `0700`, file `0600`). It is not keychain-encrypted;
+macOS/Linux (directory `0700`, file `0600`). On Windows those modes do not
+apply; the file takes the access rules of its folder. It is not keychain-encrypted;
 anyone with access to your OS account can read it. Keys are excluded from
 source exports and desktop bundles, never included in project files or browser
 storage, and never returned by the settings API. Keep private backups private.

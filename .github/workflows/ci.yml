@@ -55,3 +55,21 @@ jobs:
           name: video-fs-source
           path: dist/source/video-fs
           include-hidden-files: true
+  # The browser suite stays on Linux: on a hosted Windows runner the dev server
+  # compiles slowly enough that the first test can outrun its two-minute limit.
+  verify-windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: node node_modules/electron/install.js
+      - run: npm run check
+      - run: npm run setup
+      - run: npm run build
