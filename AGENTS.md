@@ -57,6 +57,8 @@ clip's `from_keyframe` to maintain continuity.
   complete prompt; the app does not invoke another LLM.
 - `generate_clip`: generate a Seedance clip for an existing scene. Pass
   `from_keyframe_id` and `to_keyframe_id` when endpoints should be pinned.
+- `generate_launch_video`: executable image → multi-shot launch video (scene
+  creation, Seedance clip chaining, stop-on-failure, final `check_project`).
 - `generate_audio`: create music, speech, sound effects, or voice design.
 - `edit_media`: trim clips, bake image edits, or extract frames through the app.
 - `editor_timeline_get`: read the Editor timeline and revision before editing.
@@ -83,7 +85,7 @@ group it. The canvas watches the project directory.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
-# This is NOT the Next.js you know
+## This is NOT the Next.js you know
 
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
 

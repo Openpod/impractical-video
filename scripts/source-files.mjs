@@ -10,7 +10,7 @@ const files = [
   "package.json", "package-lock.json", "next.config.ts", "next-env.d.ts", "tsconfig.json",
   "middleware.ts", "postcss.config.mjs", "eslint.config.mjs", "vitest.config.ts", "trigger.config.ts", "playwright.config.ts",
   "docs/releasing.md", "docs/local-development.md", "docs/release-validation.md", "desktop/README.md",
-  ...["setup-local.mjs", "doctor.mjs", "local-agent.mjs", "paper-mcp.mjs", "setup-paper-project.mjs", "check-release-env.mjs", "check-desktop-release.mjs", "source-files.mjs", "check-source.mjs", "export-source.mjs", "smoke-server.mjs", "extract-video-portfolio.ts", "backfill-published-display-images.ts", "publish-curated-portfolios.ts"].map((file) => `scripts/${file}`),
+  ...["setup-local.mjs", "doctor.mjs", "local-agent.mjs", "paper-mcp.mjs", "setup-paper-project.mjs", "check-release-env.mjs", "check-desktop-release.mjs", "source-files.mjs", "check-source.mjs", "check-audit.mjs", "export-source.mjs", "smoke-server.mjs", "extract-video-portfolio.ts", "backfill-published-display-images.ts", "publish-curated-portfolios.ts"].map((file) => `scripts/${file}`),
 ];
 const excluded = /(^|\/)(node_modules|generated|__pycache__|\.temp|\.git|\.next)(\/|$)|(^|\/)providers\.json(?:\.|$)|\.tmp\.|\.pyc$|\.DS_Store$|\.tsbuildinfo$/;
 

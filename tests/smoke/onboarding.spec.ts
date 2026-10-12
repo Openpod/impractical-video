@@ -28,6 +28,28 @@ test("first-run setup can be skipped, creates a project and stays completed", as
   await request.delete(`/api/projects/${projectId}`);
 });
 
+test("setup replay clears its URL state before it can be reopened", async ({ page }) => {
+  await page.goto("/?setup=1&source=smoke#intro");
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await expect(page.getByRole("button", { name: "Let’s get started" })).toBeVisible();
+    // Inspect the URL in the same event turn as dismissal: waiting for a route
+    // transition would hide the race when Setup guide is reopened immediately.
+    const dismissedUrl = new URL(await page.getByRole("button", { name: "Skip setup" }).evaluate(button => {
+      (button as HTMLButtonElement).click();
+      return window.location.href;
+    }));
+    expect(dismissedUrl.searchParams.has("setup")).toBe(false);
+    if (attempt === 0) {
+      expect(dismissedUrl.searchParams.get("source")).toBe("smoke");
+      expect(dismissedUrl.hash).toBe("#intro");
+    }
+    await expect(page.getByRole("dialog", { name: "Welcome to Impractical" })).toHaveCount(0);
+    await page.getByRole("button", { name: "Account", exact: true }).filter({ visible: true }).click();
+    await page.getByRole("menuitem", { name: "Setup guide" }).click();
+  }
+  await expect(page.getByRole("button", { name: "Let’s get started" })).toBeVisible();
+});
+
 test("onboarding saves a fal key, handles invalid input and never stores it in the browser", async ({ page, request }) => {
   try {
     await toBilling(page);

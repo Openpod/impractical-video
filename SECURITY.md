@@ -30,8 +30,33 @@ credentials must never silently switch a public deployment into local mode.
 
 ## Release checks
 
-Run `npm run check`, `npm run test:smoke`, `npm audit`, and `npm run release:scan`.
+Run `npm run check`, `npm run test:smoke`, `npm run audit:check`, and `npm run release:scan`.
 The source scanner is a bounded check for common credential patterns, not a
 proof that all information is public. Before changing the visibility of an
 existing repository, review its complete Git history, issues and artifacts.
 The source export intentionally contains no Git history or local experiments.
+
+## Temporary dependency audit exception
+
+`npm run audit:check` checks the full npm dependency graph, including development
+packages, and blocks high/critical advisories. Registry failures and malformed
+reports also fail the check. Lower-severity findings remain visible in the totals;
+use `npm audit` for the complete report.
+
+Until **2026-11-10 (UTC)**, it accepts only
+[GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm)
+in `braces@3.0.3` and its reviewed lint-only chain (`micromatch@4.0.8`,
+`fast-glob@3.3.1`, `@next/eslint-plugin-next@16.4.0`, and
+`eslint-config-next@16.4.0`). There is no patched release as of 2026-10-11.
+The vulnerable recursive brace parser receives repository-controlled lint glob
+patterns; application users do not supply these patterns. Every accepted package
+must remain marked development-only in the lockfile at its reviewed version.
+New advisories, production usage, version changes, or expiry fail the check.
+Remove the exception when a compatible upstream fix is available. Do not use
+`npm audit fix --force`: its proposed Next lint downgrade is incompatible with
+this application's Next version.
+
+The moderate `sprintf-js` advisory in Electron's build-time download/proxy
+logging chain has no patched release either. It is not exempted: it remains
+below the existing high-severity blocking threshold. Review both upstream
+advisories during dependency maintenance.

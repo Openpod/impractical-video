@@ -2,7 +2,7 @@
 
 import { ArrowLeft, ArrowRight, ArrowUpRight, Check, Coins, KeyRound, Loader2, ShieldCheck, Sparkles, Terminal } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { ImpracticalLogo } from "@/app/impractical-logo";
 import { useAppAuth } from "@/lib/app-auth";
@@ -78,7 +78,6 @@ export function WelcomeModal({ onCreateProject }: { onCreateProject: () => Promi
   const { isLoaded, isSignedIn, isLocal } = useAppAuth();
   const { dismiss, ready, seen } = useOnboardingFlag("studio-setup");
   const query = useSearchParams();
-  const router = useRouter();
   const replay = query.get("setup") === "1";
   const [step, setStep] = useState(0);
   const [choice, setChoice] = useState<"key" | "credits" | null>(null);
@@ -158,7 +157,13 @@ export function WelcomeModal({ onCreateProject }: { onCreateProject: () => Promi
   }
   function finish() {
     dismiss(); setClosed(true); setKey(""); localStorage.removeItem(STEP_KEY);
-    if (replay) router.replace("/", { scroll: false });
+    if (replay) {
+      // Setup is client-only URL state. Clear it synchronously so a slow
+      // route replacement cannot swallow an immediate Setup guide replay.
+      const url = new URL(window.location.href);
+      url.searchParams.delete("setup");
+      window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+    }
   }
   async function mode(value: "fal" | "credits") {
     if (!isLocal) return;
@@ -220,7 +225,7 @@ export function WelcomeModal({ onCreateProject }: { onCreateProject: () => Promi
   }
   const info = STEPS[step];
   return <Dialog open={open} onOpenChange={next => { if (!next && !busy) finish(); }}>
-    <DialogContent className={styles.flow} showClose={false} data-theme="light" aria-label="Welcome to Impractical" aria-labelledby={undefined} onOpenAutoFocus={event => { event.preventDefault(); document.querySelector<HTMLElement>("[data-studio-title]")?.focus(); }} onInteractOutside={event => event.preventDefault()}>
+    <DialogContent className={styles.flow} showClose={false} aria-label="Welcome to Impractical" aria-labelledby={undefined} onOpenAutoFocus={event => { event.preventDefault(); document.querySelector<HTMLElement>("[data-studio-title]")?.focus(); }} onInteractOutside={event => event.preventDefault()}>
       <header className={styles.header}>
         <div className={styles.progress} role="progressbar" aria-label="Setup progress" aria-valuemin={1} aria-valuemax={STEPS.length} aria-valuenow={step + 1} aria-valuetext={`Step ${step + 1} of ${STEPS.length}`}>
           <div className={styles.progressTrack} aria-hidden="true">{STEPS.map((_, i) => <i key={i} data-active={i <= step} />)}</div>

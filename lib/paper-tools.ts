@@ -678,6 +678,10 @@ export async function paperGenerateClip(input: {
    * imitating a still frame. */
   extendsClipId?: string | null;
   fromKeyframeId?: string | null;
+  /** Canonical order override for the derived timeline. Defaults to the
+   * creation clock; orchestrators pass an explicit base + shot number so a
+   * fast run can never tie and scramble shot order. */
+  index?: number;
   projectId: string;
   prompt: string;
   /** Reference/portfolio/keyframe ids attached as @Image1..@ImageN, in order.
@@ -813,7 +817,7 @@ async function generateClipInner(
         generated_seconds: durationSeconds,
         id: clipId,
         in_timeline: true,
-        index: Date.now(),
+        index: input.index ?? Date.now(),
         scene: sceneId,
         status: "generating",
         to_keyframe: toKeyframeId,
@@ -887,7 +891,7 @@ async function generateClipInner(
         generated_seconds: durationSeconds,
         id: clipId,
         in_timeline: true,
-        index: Date.now(),
+        index: input.index ?? Date.now(),
         local_path: localPath,
         scene: sceneId,
         transition_from_previous: extendsClipId ? "continuous" : undefined,
@@ -931,6 +935,182 @@ async function generateClipInner(
     ok: generation.ok,
     operationId,
     url: generation.url ?? null,
+  };
+}
+
+/** Seedance binds conditioning by tag; agents often write the beat without
+ * the binding prefix the house method requires, so normalize it in code. */
+function chainPrompt(prompt: string, tag: "@Image1" | "@Video1") {
+  if (prompt.includes(tag)) return prompt;
+  return tag === "@Image1"
+    ? `The video begins exactly on @Image1. ${prompt}`
+    : `Continue from @Video1: ${prompt}`;
+}
+
+function isVideoMediaPath(filePath: string) {
+  return /\.(mp4|webm|mov|m4v)$/i.test(filePath);
+}
+
+/** Resolve an anchor id's record kind from the snapshot alone — no network
+ * side effects, unlike fetchableMediaUrl, which uploads local-only bytes to
+ * fal storage as a fallback (the launch-video preflight runs before anything
+ * is charged for, so it must not spend a provider call). */
+function resolveLaunchAnchor(
+  snapshot: ProjectSnapshot,
+  imageId: string,
+): { hasMedia: boolean; kind: "audio" | "image" | "video" } | null {
+  for (const file of snapshot.files) {
+    if (!file.content) continue;
+    const meta = parseJsonFrontmatter(file.content).meta;
+    if (meta.id !== imageId && meta.reference_id !== imageId) continue;
+    const media =
+      firstString(meta.local_path) ??
+      firstUrl(meta.url) ??
+      firstUrl(meta.urls) ??
+      firstUrl(meta.source_url);
+    const isClipRecord = file.path.startsWith("clips/");
+    if (
+      isClipRecord ||
+      meta.kind === "video" ||
+      (media && isVideoMediaPath(media))
+    ) {
+      return { hasMedia: Boolean(media), kind: "video" };
+    }
+    if (meta.kind === "audio" || (media && /\.(mp3|wav|m4a)$/i.test(media))) {
+      return { hasMedia: Boolean(media), kind: "audio" };
+    }
+    return { hasMedia: Boolean(media), kind: "image" };
+  }
+  return null;
+}
+
+/** In-flight launch-video runs by project:title key. A retried run would mint
+ * fresh clip ids and bypass the per-clip in-flight guard, silently doubling
+ * the whole chain — the retry gets a fast, explicit "already running" error
+ * instead, mirroring the generate_clip guard. */
+const inFlightLaunchVideos = (globalThis as typeof globalThis & {
+  __videoFsInFlightLaunchVideos?: Set<string>;
+}).__videoFsInFlightLaunchVideos ??= new Set<string>();
+
+/**
+ * Executable image → launch-video workflow: the seedance-clip-chaining house
+ * method as one deterministic call. Anchors a scene (given or created) on a
+ * source image, generates one clip per shot extending the previous clip's
+ * footage, stops at the first failed link (never chain from a failed clip),
+ * and finishes with check_project. The creative decomposition — the shots —
+ * stays with the calling agent; the mechanics (scene, ids, chaining,
+ * reference carrying, failure policy, checking) live here instead of in a
+ * prose recipe.
+ */
+export async function paperGenerateLaunchVideo(input: {
+  aspectRatio?: string;
+  durationSeconds?: number;
+  imageId: string;
+  projectId: string;
+  sceneId?: string | null;
+  sceneTitle?: string;
+  shots: Array<{ durationSeconds?: number; prompt: string; title: string }>;
+  title: string;
+}) {
+  const runKey = `${input.projectId}:${input.title}`;
+  if (inFlightLaunchVideos.has(runKey)) {
+    throw new Error(
+      `Launch video "${input.title}" is already running in this project. Do not retry — wait, then read its records or check_project; the running generation will land on its own.`,
+    );
+  }
+  inFlightLaunchVideos.add(runKey);
+  try {
+    return await generateLaunchVideoInner(input);
+  } finally {
+    inFlightLaunchVideos.delete(runKey);
+  }
+}
+
+async function generateLaunchVideoInner(
+  input: Parameters<typeof paperGenerateLaunchVideo>[0],
+) {
+  const imageId = cleanId(input.imageId, input.imageId);
+  const snapshot = await getProjectSnapshot(input.projectId);
+  const anchor = resolveLaunchAnchor(snapshot, imageId);
+  if (!anchor || (anchor.kind === "image" && !anchor.hasMedia)) {
+    throw new Error(
+      `Image "${imageId}" has no usable media to anchor a launch video on.`,
+    );
+  }
+  if (anchor.kind !== "image") {
+    throw new Error(
+      `"${imageId}" is ${anchor.kind === "video" ? "video footage" : "an audio record"}; generate_launch_video anchors on a still image. Extract a frame first (edit_media op=extract_frame) and pass the frame's id.`,
+    );
+  }
+
+  let sceneId = input.sceneId ? cleanId(input.sceneId, input.sceneId) : null;
+  const runStart = Date.now();
+  const runId = runStart.toString(36);
+  if (!sceneId) {
+    const nextIndex = snapshot.files.reduce((max, file) => {
+      if (!file.content || !file.path.endsWith("/scene.md")) return max;
+      const index = parseJsonFrontmatter(file.content).meta.index;
+      return typeof index === "number" && index >= max ? index + 1 : max;
+    }, 1);
+    const created = await paperCreateScene({
+      body: `Launch video built from @${imageId} via generate_launch_video.`,
+      index: nextIndex,
+      projectId: input.projectId,
+      referenceIds: [imageId],
+      // Unique per run like every generated artifact id: re-running the same
+      // titled brief (the documented retry path) must not mint a second
+      // scene record with a duplicate id — the source graph flags those as
+      // "duplicate-id" errors.
+      sceneId: `scene_${slug(input.title)}_${runId}`,
+      title: input.sceneTitle ?? input.title,
+    });
+    sceneId = created.sceneId;
+  }
+
+  const clipIds: string[] = [];
+  let failure: { error: string; shot: number } | null = null;
+  for (const [index, shot] of input.shots.entries()) {
+    const previousClipId = clipIds[clipIds.length - 1] ?? null;
+    let result: Awaited<ReturnType<typeof paperGenerateClip>>;
+    try {
+      result = await paperGenerateClip({
+        aspectRatio: input.aspectRatio,
+        clipId: `launch_${slug(shot.title)}_${index + 1}_${runId}`,
+        durationSeconds: shot.durationSeconds ?? input.durationSeconds,
+        extendsClipId: previousClipId,
+        index: runStart + index,
+        projectId: input.projectId,
+        prompt: chainPrompt(shot.prompt, previousClipId ? "@Video1" : "@Image1"),
+        referenceIds: [imageId],
+        sceneId,
+        title: shot.title,
+      });
+    } catch (error) {
+      // A mid-chain throw (missing extension media, ffmpeg failure, in-flight
+      // duplicate) must not erase the completed shots: report it exactly like
+      // a provider failure so the caller keeps { clipIds, failedShot }.
+      failure = {
+        error:
+          error instanceof Error ? error.message : "Clip generation failed.",
+        shot: index,
+      };
+      break;
+    }
+    if (!result.ok) {
+      failure = { error: result.error ?? "Clip generation failed.", shot: index };
+      break;
+    }
+    clipIds.push(result.clipId);
+  }
+
+  const check = await checkProject(input.projectId);
+  return {
+    check,
+    clipIds,
+    error: failure?.error ?? null,
+    failedShot: failure?.shot ?? null,
+    ok: !failure,
+    sceneId,
   };
 }
 

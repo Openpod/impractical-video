@@ -28,6 +28,8 @@ the preceding clip's `to_keyframe` as the next clip's `from_keyframe`.
   final prompt; the app does not invoke another LLM.
 - `generate_clip`: generate a Seedance clip for an existing scene. Pass
   `from_keyframe_id` and `to_keyframe_id` to pin endpoints.
+- `generate_launch_video`: executable image → multi-shot launch video (scene
+  creation, Seedance clip chaining, stop-on-failure, final `check_project`).
 - `get_project_status`: inspect artifact counts, active work, and checker state.
 - `check_project`: run deterministic continuity and dependency validation.
 

@@ -35,6 +35,7 @@ import {
 
 const SECRET = "desktop-auth-test-secret-that-is-more-than-thirty-two-characters";
 const VERIFIER = Buffer.alloc(32, 7).toString("base64url");
+let issuedToken: string;
 
 // One expiry for the whole run: a token made again after the clock passes a
 // second boundary would no longer equal the one the mock handed out.
@@ -54,7 +55,8 @@ beforeEach(() => {
     status: "active",
     userId: "user_desktop_123",
   });
-  clerk.getToken.mockResolvedValue({ jwt: clerkToken() });
+  issuedToken = clerkToken();
+  clerk.getToken.mockResolvedValue({ jwt: issuedToken });
   clerk.client.mockResolvedValue({
     sessions: { getSession: clerk.getSession, getToken: clerk.getToken },
   });
@@ -117,6 +119,8 @@ describe("desktop auth codes", () => {
 
 describe("hosted desktop auth routes", () => {
   it("authorizes the hosted Clerk session, exchanges it, and refreshes it", async () => {
+    // Exercise a clock-second boundary after the provider token was issued.
+    vi.spyOn(Date, "now").mockReturnValue(Date.now() + 1_000);
     vi.stubEnv("APP_MODE", "hosted");
     const state = Buffer.alloc(32, 4).toString("base64url");
     const challenge = desktopPkceChallenge(VERIFIER);
@@ -145,7 +149,7 @@ describe("hosted desktop auth routes", () => {
       refreshToken: string;
       token: string;
     };
-    expect(exchangeBody.token).toBe(clerkToken());
+    expect(exchangeBody.token).toBe(issuedToken);
     expect(clerk.getToken).toHaveBeenCalledWith("sess_desktop_123", undefined, 600);
 
     const refreshResponse = await refresh(
@@ -156,7 +160,7 @@ describe("hosted desktop auth routes", () => {
       }),
     );
     expect(refreshResponse.status).toBe(200);
-    expect((await refreshResponse.json()).token).toBe(clerkToken());
+    expect((await refreshResponse.json()).token).toBe(issuedToken);
   });
 
   it("rejects cross-origin authorization posts", async () => {
@@ -185,13 +189,14 @@ describe("local desktop handoff", () => {
       "http://127.0.0.1:3210/api/desktop/auth/callback",
     );
     const state = authUrl.searchParams.get("state");
+    const token = clerkToken();
     const hostedFetch = vi.fn().mockResolvedValue(
-      Response.json({ refreshToken: "refresh_code", token: clerkToken() }),
+      Response.json({ refreshToken: "refresh_code", token }),
     );
     vi.stubGlobal("fetch", hostedFetch);
 
     await completeDesktopAuthAttempt({ code: "authorization_code", state });
-    expect(getDesktopCloudSessionToken()).toBe(clerkToken());
+    expect(getDesktopCloudSessionToken()).toBe(token);
     expect(hostedFetch).toHaveBeenCalledWith(
       "https://chat.impractical.ai/api/desktop/auth/exchange",
       expect.objectContaining({ method: "POST" }),

@@ -10,7 +10,7 @@
     "appId": "ai.impractical.videofs",
     "productName": "Video FS",
     "asar": true,
-    "electronVersion": "43.2.0",
+    "electronVersion": "43.7.9",
     "directories": {
       "output": "../dist/desktop"
     },

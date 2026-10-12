@@ -25,3 +25,23 @@ are the persistence boundary; hosted Clerk/Supabase/Stripe services are optional
 
 Be respectful, assume good intent, and keep feedback specific to the work.
 Report security issues through the private channel described in [SECURITY.md](SECURITY.md).
+
+## Maintenance and merges
+
+Merge through a pull request after the GitHub Actions `verify` check passes on
+an up-to-date branch. Review the diff and test evidence even for dependency PRs;
+CI passing does not replace review. Keep fixes focused and preserve contributor
+attribution when merging. Do not bypass failing checks to merge a contribution.
+
+CI runs for pull requests, pushes to `main`, release tags, and every Monday at
+09:23 UTC. It can also be started manually from Actions. The weekly run detects
+new advisories even when the source has not changed. Dependabot checks npm and
+GitHub Actions weekly and proposes updates as PRs; updates are not auto-merged.
+
+For dependency updates, run `npm run audit:check` as well as `npm run check`.
+Keep Next and its ESLint config compatible. When updating Electron, update
+`desktop/package.json`'s `build.electronVersion` to match the tested root
+lockfile so packaged apps receive the same fixes. Review the temporary exception
+in [SECURITY.md](SECURITY.md) before its expiry and remove it when an upstream
+patch is available. Test the browser, production build, and source export before
+merging runtime or packaging dependency changes.
