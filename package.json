@@ -112,7 +112,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/three": "^0.185.0",
-    "electron": "^43.7.9",
+    "electron": "^43.8.1",
     "electron-builder": "^26.15.3",
     "esbuild": "^0.28.1",
     "eslint": "^9",
